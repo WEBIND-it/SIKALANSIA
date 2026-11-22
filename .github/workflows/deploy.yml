@@ -85,10 +85,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Check Secrets Presence
+        env:
+          TS_AUTHKEY: ${{ secrets.TAILSCALE_AUTHKEY || secrets.TS_AUTHKEY || secrets.TAILSCALE_AUTH_KEY || secrets.TS_KEY }}
+          SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+        run: |
+          if [ -z "$TS_AUTHKEY" ]; then
+            echo "::error title=Missing Secret::TAILSCALE_AUTHKEY is empty! Please add it in https://github.com/WEBIND-it/SIKALANSIA/settings/secrets/actions under 'Repository secrets'"
+          else
+            echo "✓ Tailscale Auth Key detected (characters: ${#TS_AUTHKEY})"
+          fi
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error title=Missing Secret::SERVER_SSH_KEY is empty! Please add it in Repository secrets."
+          else
+            echo "✓ SERVER_SSH_KEY detected"
+          fi
+
       - name: Connect GitHub runner to Tailscale
         uses: tailscale/github-action@v3
         with:
-          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY || secrets.TS_AUTHKEY || secrets.TAILSCALE_AUTH_KEY || secrets.TS_KEY }}
 
       - name: Configure SSH
         env:
@@ -96,10 +112,22 @@ jobs:
           SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          if [ -n "$KNOWN_HOSTS" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+            chmod 600 ~/.ssh/known_hosts
+          fi
+
+          # Clean Windows \r carriage returns and ensure trailing newline for OpenSSL 3.0 libcrypto
+          if echo "$SSH_KEY" | grep -q "BEGIN"; then
+            printf '%s\n' "$SSH_KEY" | tr -d '\r' > ~/.ssh/id_ed25519
+          else
+            echo "$SSH_KEY" | base64 -d | tr -d '\r' > ~/.ssh/id_ed25519
+          fi
+          echo "" >> ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+
+          # Validate key format
+          ssh-keygen -y -f ~/.ssh/id_ed25519
 
       - name: Deploy to Home Server over Tailscale
         env:
@@ -109,15 +137,17 @@ jobs:
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REMOTE_DIR="/home/deploy/projects/sikalansia"
+          SSH_CMD="ssh -i /home/runner/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15"
+          SCP_CMD="scp -i /home/runner/.ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15"
 
           # 1. Pastikan folder remote ada
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$SERVER_USER@$SERVER_HOST" "mkdir -p $REMOTE_DIR"
+          $SSH_CMD "$SERVER_USER@$SERVER_HOST" "mkdir -p $REMOTE_DIR"
 
           # 2. Salin docker-compose.prod.yml ke server
-          scp -i ~/.ssh/id_ed25519 -o BatchMode=yes docker-compose.prod.yml "$SERVER_USER@$SERVER_HOST:$REMOTE_DIR/docker-compose.yml"
+          $SCP_CMD docker-compose.prod.yml "$SERVER_USER@$SERVER_HOST:$REMOTE_DIR/docker-compose.yml"
 
           # 3. Pull image dan jalankan container
-          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes "$SERVER_USER@$SERVER_HOST" \
+          $SSH_CMD "$SERVER_USER@$SERVER_HOST" \
             "cd $REMOTE_DIR && \
              export IMAGE_OWNER=$OWNER_LC && \
              export IMAGE_TAG=$IMAGE_TAG && \
