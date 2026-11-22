@@ -134,6 +134,8 @@ jobs:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           IMAGE_TAG: ${{ github.sha }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REMOTE_DIR="/home/deploy/projects/sikalansia"
@@ -143,10 +145,13 @@ jobs:
           # 1. Pastikan folder remote ada
           $SSH_CMD "$SERVER_USER@$SERVER_HOST" "mkdir -p $REMOTE_DIR"
 
-          # 2. Salin docker-compose.prod.yml ke server
+          # 2. Login Docker ke GHCR di Home Server menggunakan token workflow
+          echo "$GHCR_TOKEN" | $SSH_CMD "$SERVER_USER@$SERVER_HOST" "docker login ghcr.io -u $GHCR_USER --password-stdin"
+
+          # 3. Salin docker-compose.prod.yml ke server
           $SCP_CMD docker-compose.prod.yml "$SERVER_USER@$SERVER_HOST:$REMOTE_DIR/docker-compose.yml"
 
-          # 3. Pull image dan jalankan container
+          # 4. Pull image dan jalankan container
           $SSH_CMD "$SERVER_USER@$SERVER_HOST" \
             "cd $REMOTE_DIR && \
              export IMAGE_OWNER=$OWNER_LC && \
