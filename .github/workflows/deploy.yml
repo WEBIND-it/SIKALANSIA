@@ -1,6 +1,6 @@
 name: Build and Deploy SIKALANSIA
 
-on:
+'on':
   push:
     branches: [main]
   workflow_dispatch:
