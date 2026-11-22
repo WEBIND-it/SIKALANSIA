@@ -17,7 +17,7 @@ services:
     cpus: 0.2
 
   server:
-    image: ghcr.io/${IMAGE_OWNER:-yuriya-dev}/sikalansia-server:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-webind-it}/sikalansia-server:${IMAGE_TAG:-latest}
     container_name: sikalansia-server
     restart: unless-stopped
     ports:
@@ -36,7 +36,7 @@ services:
     cpus: 0.8
 
   client:
-    image: ghcr.io/${IMAGE_OWNER:-yuriya-dev}/sikalansia-client:${IMAGE_TAG:-latest}
+    image: ghcr.io/${IMAGE_OWNER:-webind-it}/sikalansia-client:${IMAGE_TAG:-latest}
     container_name: sikalansia-client
     restart: unless-stopped
     ports:
