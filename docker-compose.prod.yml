@@ -1,0 +1,57 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sikalansia-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    mem_limit: 128m
+    cpus: 0.2
+
+  server:
+    image: ghcr.io/${IMAGE_OWNER:-yuriya-dev}/sikalansia-server:${IMAGE_TAG:-latest}
+    container_name: sikalansia-server
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5001:5001"
+      - "100.70.122.7:5001:5001"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    mem_limit: 350m
+    cpus: 0.8
+
+  client:
+    image: ghcr.io/${IMAGE_OWNER:-yuriya-dev}/sikalansia-client:${IMAGE_TAG:-latest}
+    container_name: sikalansia-client
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3012:3000"
+      - "100.70.122.7:3012:3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    depends_on:
+      - server
+    mem_limit: 380m
+    cpus: 1.0
+
+volumes:
+  redis_data:
+    driver: local
