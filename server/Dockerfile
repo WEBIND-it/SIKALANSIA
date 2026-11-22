@@ -1,8 +1,8 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci
+RUN npm install --legacy-peer-deps
 RUN npx prisma generate
 COPY tsconfig.json ./
 COPY src ./src/
@@ -16,9 +16,9 @@ ENV PORT=5001
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 expressjs
 
-COPY package*.json ./
+COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
-RUN npm ci --omit=dev
+RUN npm install --omit=dev --legacy-peer-deps
 RUN npx prisma generate
 COPY --from=builder /app/dist ./dist
 
