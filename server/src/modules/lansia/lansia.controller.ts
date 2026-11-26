@@ -151,7 +151,7 @@ export const createPemeriksaanLansia = async (req: Request, res: Response, next:
     const {
       tanggalPeriksa, beratBadan, tinggiBadan,
       tekananDarahSistol, tekananDarahDiastol, gulaDarahSewaktu, lingkarPerut,
-      kolesterol, asamUrat, keluhan, tindakan, petugas,
+      kolesterol, asamUrat, keluhan, tindakan, petugas, usedStokIds,
     } = req.body;
 
     let petugasNama = petugas || req.user?.nama;
@@ -175,6 +175,7 @@ export const createPemeriksaanLansia = async (req: Request, res: Response, next:
         keluhan,
         tindakan,
         petugas: petugasNama || 'Kader Posyandu',
+        usedStokIds: Array.isArray(usedStokIds) ? usedStokIds : undefined,
       },
       posyanduId
     );

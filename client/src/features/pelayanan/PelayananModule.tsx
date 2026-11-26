@@ -9,8 +9,9 @@ import {
   Plus,
   CheckCircle2,
   UserPlus,
+  Package,
 } from "lucide-react";
-import { lansiaApi, Lansia, PeriodePelayanan } from "../../lib/api";
+import { lansiaApi, Lansia, PeriodePelayanan, stokPerlakuanApi, StokPerlakuan } from "../../lib/api";
 import { useAuth } from "../../contexts/AuthContext";
 import { SearchIndex } from "../../lib/searchIndex";
 import { clientDataCache } from "../../lib/dataCache";
@@ -105,6 +106,11 @@ export default function PelayananModule({
   const [keluhanLansia, setKeluhanLansia] = useState("");
   const [tindakanLansia, setTindakanLansia] = useState("");
   const [petugas, setPetugas] = useState("");
+
+  // Stok Perlakuan Auto-Deduction State
+  const [stokList, setStokList] = useState<StokPerlakuan[]>([]);
+  const [manualCheckedStokIds, setManualCheckedStokIds] = useState<string[]>([]);
+  const [manualUncheckedStokIds, setManualUncheckedStokIds] = useState<string[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -206,11 +212,69 @@ export default function PelayananModule({
       .finally(() => setIsLoading(false));
   };
 
+  const fetchStokList = async () => {
+    try {
+      const res = await stokPerlakuanApi.getAll(posyanduId);
+      if (res.success && Array.isArray(res.data)) {
+        setStokList(res.data);
+      }
+    } catch {
+      // Silent fallback jika stok belum tersedia
+    }
+  };
+
   useEffect(() => {
     if (posyanduId) {
       fetchPatients();
+      fetchStokList();
     }
   }, [posyanduId, activePeriode]);
+
+  const autoMatchedStokIds = useMemo(() => {
+    if (isEditingExam || stokList.length === 0) return [];
+    const matched: string[] = [];
+    const hasGds = Number(gulaDarah) > 0;
+    const hasKolesterol = Number(kolesterol) > 0;
+    const hasAsamUrat = Number(asamUrat) > 0;
+
+    for (const item of stokList) {
+      if (item.sisa <= 0) continue;
+      const kat = (item.kategori || "").toLowerCase();
+      const nama = item.namaBarang.toLowerCase();
+      if (hasGds && (kat.includes("gula") || nama.includes("gds") || nama.includes("gula darah"))) {
+        matched.push(item.id);
+      } else if (hasKolesterol && (kat.includes("kolesterol") || nama.includes("kolesterol"))) {
+        matched.push(item.id);
+      } else if (hasAsamUrat && (kat.includes("asam urat") || nama.includes("asam urat"))) {
+        matched.push(item.id);
+      }
+    }
+    return matched;
+  }, [isEditingExam, stokList, gulaDarah, kolesterol, asamUrat]);
+
+  const selectedStokIds = useMemo(() => {
+    if (isEditingExam) return [];
+    const availableIds = new Set(stokList.filter((s) => s.sisa > 0).map((s) => s.id));
+    const autoActive = autoMatchedStokIds.filter((id) => !manualUncheckedStokIds.includes(id));
+    const manualActive = manualCheckedStokIds.filter((id) => availableIds.has(id));
+    return Array.from(new Set([...autoActive, ...manualActive]));
+  }, [isEditingExam, stokList, autoMatchedStokIds, manualCheckedStokIds, manualUncheckedStokIds]);
+
+  const toggleStokItem = (id: string) => {
+    const isCurrentlySelected = selectedStokIds.includes(id);
+    const isAuto = autoMatchedStokIds.includes(id);
+    if (isCurrentlySelected) {
+      setManualCheckedStokIds((prev) => prev.filter((x) => x !== id));
+      if (isAuto) {
+        setManualUncheckedStokIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      }
+    } else {
+      setManualUncheckedStokIds((prev) => prev.filter((x) => x !== id));
+      if (!isAuto) {
+        setManualCheckedStokIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+      }
+    }
+  };
 
   const filteredPasiens = useMemo(() => {
     let result = pasiens;
@@ -269,6 +333,8 @@ export default function PelayananModule({
     setTindakanLansia("");
     setPetugas(user?.nama || "");
     setFormWarning(null);
+    setManualCheckedStokIds([]);
+    setManualUncheckedStokIds([]);
   };
 
   const checkWarnings = (bb: string, sistol: string, gds: string) => {
@@ -345,8 +411,18 @@ export default function PelayananModule({
         await lansiaApi.updatePemeriksaan(posyanduId, selectedPasien.id, editingExamId, payload);
         toast.success("Data pemeriksaan lansia berhasil diperbarui!");
       } else {
-        await lansiaApi.createPemeriksaan(posyanduId, selectedPasien.id, payload);
-        toast.success("Pemeriksaan lansia berhasil disimpan!");
+        await lansiaApi.createPemeriksaan(posyanduId, selectedPasien.id, {
+          ...payload,
+          ...(selectedStokIds.length > 0 ? { usedStokIds: selectedStokIds } : {}),
+        });
+        toast.success(
+          selectedStokIds.length > 0
+            ? `Pemeriksaan disimpan & ${selectedStokIds.length} stok perlakuan terpotong otomatis!`
+            : "Pemeriksaan lansia berhasil disimpan!"
+        );
+        if (selectedStokIds.length > 0) {
+          fetchStokList();
+        }
       }
 
       clearExamDraft(posyanduId, selectedPasien.id);
@@ -538,6 +614,67 @@ export default function PelayananModule({
                   <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-900 font-semibold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                     <span>{formWarning}</span>
+                  </div>
+                )}
+
+                {!isEditingExam && stokList.length > 0 && (
+                  <div className="p-3.5 bg-teal-50/50 border border-teal-200/70 rounded-xl space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Package className="w-4 h-4 text-teal-700" />
+                        <span className="text-xs font-bold text-teal-900">
+                          Potong Stok Perlakuan Otomatis (-1)
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-teal-700">
+                        {selectedStokIds.length} dipilih
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-teal-800/80">
+                      Stick GDS, Kolesterol, & Asam Urat tercentang otomatis saat nilainya diisi. Pilih juga vitamin/alat yang diberikan:
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {stokList.map((item) => {
+                        const checked = selectedStokIds.includes(item.id);
+                        const isAuto = autoMatchedStokIds.includes(item.id);
+                        const outOfStock = item.sisa <= 0;
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            disabled={outOfStock}
+                            onClick={() => toggleStokItem(item.id)}
+                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border transition-all flex items-center gap-1.5 ${
+                              outOfStock
+                                ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                                : checked
+                                  ? "bg-teal-700 text-white border-teal-700 shadow-2xs cursor-pointer"
+                                  : "bg-white text-gray-700 border-gray-200 hover:border-teal-400 cursor-pointer"
+                            }`}
+                          >
+                            <span>{item.namaBarang}</span>
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                checked
+                                  ? "bg-teal-800 text-teal-100"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              {outOfStock ? "Habis" : `Sisa ${item.sisa}`}
+                            </span>
+                            {isAuto && !outOfStock && (
+                              <span
+                                className={`text-[9px] uppercase tracking-wider font-bold ${
+                                  checked ? "text-amber-200" : "text-teal-600"
+                                }`}
+                              >
+                                Auto
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 

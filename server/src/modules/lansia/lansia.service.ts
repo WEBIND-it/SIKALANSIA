@@ -144,9 +144,11 @@ export const lansiaService = {
       keluhan?: string;
       tindakan?: string;
       petugas?: string;
+      usedStokIds?: string[];
     },
     posyanduId?: string
   ) {
+    const { usedStokIds, ...examData } = data;
     const lansia = await prisma.lansia.findFirst({
       where: {
         id: lansiaId,
@@ -154,7 +156,7 @@ export const lansiaService = {
       },
     });
     if (!lansia) throw new Error('Lansia tidak ditemukan');
-    const periksaDate = new Date(data.tanggalPeriksa);
+    const periksaDate = new Date(examData.tanggalPeriksa);
     const startOfMonth = new Date(Date.UTC(periksaDate.getUTCFullYear(), periksaDate.getUTCMonth(), 1));
     const endOfMonth = new Date(Date.UTC(periksaDate.getUTCFullYear(), periksaDate.getUTCMonth() + 1, 0, 23, 59, 59, 999));
 
@@ -173,10 +175,33 @@ export const lansiaService = {
     if (existingExam) {
       result = await prisma.pemeriksaanLansia.update({
         where: { id: existingExam.id },
-        data,
+        data: examData,
       });
     } else {
-      result = await prisma.pemeriksaanLansia.create({ data: { ...data, lansiaId } });
+      result = await prisma.pemeriksaanLansia.create({ data: { ...examData, lansiaId } });
+    }
+
+    // Potong stok perlakuan otomatis jika ada item yang dipilih
+    if (usedStokIds && usedStokIds.length > 0) {
+      const uniqueIds = Array.from(new Set(usedStokIds));
+      const stokItems = await prisma.stokPerlakuan.findMany({
+        where: {
+          id: { in: uniqueIds },
+          posyanduId: lansia.posyanduId,
+          sisa: { gt: 0 },
+        },
+      });
+
+      await Promise.all(
+        stokItems.map((item) => {
+          const newTerpakai = item.terpakai + 1;
+          const newSisa = Math.max(0, item.stokTersedia - newTerpakai);
+          return prisma.stokPerlakuan.update({
+            where: { id: item.id },
+            data: { terpakai: newTerpakai, sisa: newSisa },
+          });
+        })
+      );
     }
 
     cacheService.delByPattern(`dashboard:*:${lansia.posyanduId}*`).catch(() => {});

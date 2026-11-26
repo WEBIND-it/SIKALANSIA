@@ -32,6 +32,12 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+    CREATE TYPE "KondisiAset" AS ENUM ('BAIK', 'RUSAK_RINGAN', 'RUSAK_BERAT');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- -----------------------------------------------------------------------------
 -- 1. TABEL: POSYANDU
 -- -----------------------------------------------------------------------------
@@ -167,6 +173,44 @@ CREATE TABLE IF NOT EXISTS "periode_pelayanan" (
 );
 
 -- -----------------------------------------------------------------------------
+-- 8. TABEL: ASET (MONITORING ASET POSYANDU)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "aset" (
+    "id" TEXT NOT NULL,
+    "posyandu_id" TEXT NOT NULL,
+    "nama" TEXT NOT NULL,
+    "foto" TEXT,
+    "stok" INTEGER NOT NULL DEFAULT 1,
+    "kondisi" "KondisiAset" NOT NULL DEFAULT 'BAIK',
+    "tanggal_masuk_baru" DATE,
+    "tanggal_masuk_sebelumnya" DATE,
+    "catatan" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "aset_pkey" PRIMARY KEY ("id")
+);
+
+-- -----------------------------------------------------------------------------
+-- 9. TABEL: STOK PERLAKUAN (MONITORING STOK OBAT, VITAMIN & ALAT MEDIS)
+-- -----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "stok_perlakuan" (
+    "id" TEXT NOT NULL,
+    "posyandu_id" TEXT NOT NULL,
+    "nama_barang" TEXT NOT NULL,
+    "stok_tersedia" INTEGER NOT NULL DEFAULT 0,
+    "terpakai" INTEGER NOT NULL DEFAULT 0,
+    "sisa" INTEGER NOT NULL DEFAULT 0,
+    "satuan" TEXT NOT NULL DEFAULT 'pcs',
+    "kategori" TEXT,
+    "catatan" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "stok_perlakuan_pkey" PRIMARY KEY ("id")
+);
+
+-- -----------------------------------------------------------------------------
 -- INDEXES & CONSTRAINTS
 -- -----------------------------------------------------------------------------
 CREATE UNIQUE INDEX IF NOT EXISTS "kader_username_key" ON "kader"("username");
@@ -180,6 +224,8 @@ CREATE INDEX IF NOT EXISTS "pemeriksaan_lansia_tanggal_periksa_idx" ON "pemeriks
 CREATE INDEX IF NOT EXISTS "notification_posyandu_id_idx" ON "notification"("posyandu_id");
 CREATE INDEX IF NOT EXISTS "audit_log_posyandu_id_idx" ON "audit_log"("posyandu_id");
 CREATE INDEX IF NOT EXISTS "periode_pelayanan_posyandu_id_idx" ON "periode_pelayanan"("posyandu_id");
+CREATE INDEX IF NOT EXISTS "aset_posyandu_id_idx" ON "aset"("posyandu_id");
+CREATE INDEX IF NOT EXISTS "stok_perlakuan_posyandu_id_idx" ON "stok_perlakuan"("posyandu_id");
 
 -- -----------------------------------------------------------------------------
 -- FOREIGN KEYS
@@ -232,6 +278,24 @@ END $$;
 DO $$ BEGIN
     ALTER TABLE "periode_pelayanan"
         ADD CONSTRAINT "periode_pelayanan_posyandu_id_fkey"
+        FOREIGN KEY ("posyandu_id") REFERENCES "posyandu"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "aset"
+        ADD CONSTRAINT "aset_posyandu_id_fkey"
+        FOREIGN KEY ("posyandu_id") REFERENCES "posyandu"("id")
+        ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "stok_perlakuan"
+        ADD CONSTRAINT "stok_perlakuan_posyandu_id_fkey"
         FOREIGN KEY ("posyandu_id") REFERENCES "posyandu"("id")
         ON DELETE CASCADE ON UPDATE CASCADE;
 EXCEPTION

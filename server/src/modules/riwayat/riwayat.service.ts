@@ -8,6 +8,10 @@ export interface FilterRiwayat {
   status?: 'semua' | 'success' | 'warning';
   bulan?: number;
   tahun?: number;
+  tanggalTtd?: string;
+  namaKades?: string;
+  namaBidan?: string;
+  namaKaur?: string;
 }
 
 export interface ItemRiwayat {
@@ -135,7 +139,8 @@ export const riwayatService = {
         });
       }
 
-    results.sort((a, b) => new Date(b.tanggal).getTime() - new Date(a.tanggal).getTime());
+    // Urutkan abjad A-Z berdasarkan nama lansia di web maupun laporan (Task.md: Sorting Lansia)
+    results.sort((a, b) => (a.nama || '').localeCompare(b.nama || '', 'id', { sensitivity: 'base' }));
 
     if (status && status !== 'semua') {
       return results.filter((r) => r.statusType === status);
@@ -152,6 +157,7 @@ export const riwayatService = {
 
     // Ambil data yang sudah terfilter secara tepat
     const data = await this.getRiwayat(posyanduId, filter);
+    const kaders = await prisma.kader.findMany({ where: { posyanduId, isActive: true }, orderBy: { nama: 'asc' } });
 
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Sistem Informasi Posyandu';
@@ -510,32 +516,80 @@ export const riwayatService = {
       applyBordersToRange(sheet, sRow, 1, sRow + 5, 17, summaryBorder);
 
       // ─────────────────────────────────────────────────────────────
-      // SIGNATURE BLOCK (PERSIS FORMAT PDF)
+      // SIGNATURE BLOCK (PERSIS FORMAT PDF DENGAN KADER & KADES/BIDAN/KAUR)
       // ─────────────────────────────────────────────────────────────
       const sigRow = sRow + 7;
-      sheet.mergeCells(`M${sigRow}:Q${sigRow}`);
-      const sigDate = sheet.getCell(`M${sigRow}`);
-      sigDate.value = `${posyandu.desa || 'Desa'}, ${todayFormatted}`;
+      const tglTtdFormatted = filter.tanggalTtd
+        ? new Date(filter.tanggalTtd).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+        : todayFormatted;
+
+      // Kiri: Kader Posyandu
+      sheet.mergeCells(`B${sigRow}:F${sigRow}`);
+      sheet.getCell(`B${sigRow}`).value = 'Kader Posyandu Lansia:';
+      sheet.getCell(`B${sigRow}`).font = { name: 'Arial', size: 9, bold: true };
+
+      if (kaders.length === 0) {
+        sheet.mergeCells(`B${sigRow + 2}:F${sigRow + 2}`);
+        sheet.getCell(`B${sigRow + 2}`).value = '1. ( ............................................ )';
+        sheet.getCell(`B${sigRow + 2}`).font = { name: 'Arial', size: 8.5 };
+      } else {
+        kaders.slice(0, 5).forEach((k, idx) => {
+          const kRow = sigRow + 1 + idx;
+          sheet.getCell(`B${kRow}`).value = `${idx + 1}. ${k.nama}`;
+          sheet.getCell(`B${kRow}`).font = { name: 'Arial', size: 8.5 };
+          sheet.getCell(`D${kRow}`).value = '( ......................... )';
+          sheet.getCell(`D${kRow}`).font = { name: 'Arial', size: 8.5 };
+        });
+      }
+
+      // Kanan: Kades, Bidan, Kaur
+      sheet.mergeCells(`L${sigRow}:Q${sigRow}`);
+      const sigDate = sheet.getCell(`L${sigRow}`);
+      sigDate.value = `${posyandu.desa || 'Desa'}, ${tglTtdFormatted}`;
       sigDate.font = { name: 'Arial', size: 9 };
       sigDate.alignment = { horizontal: 'center' };
 
-      sheet.mergeCells(`M${sigRow + 1}:Q${sigRow + 1}`);
-      const sigMengetahui = sheet.getCell(`M${sigRow + 1}`);
+      sheet.mergeCells(`L${sigRow + 1}:Q${sigRow + 1}`);
+      const sigMengetahui = sheet.getCell(`L${sigRow + 1}`);
       sigMengetahui.value = 'Mengetahui,';
       sigMengetahui.font = { name: 'Arial', size: 9 };
       sigMengetahui.alignment = { horizontal: 'center' };
 
-      sheet.mergeCells(`M${sigRow + 2}:Q${sigRow + 2}`);
-      const sigKader = sheet.getCell(`M${sigRow + 2}`);
-      sigKader.value = 'Ketua / Kader Posyandu';
-      sigKader.font = { name: 'Arial', size: 9, bold: true };
-      sigKader.alignment = { horizontal: 'center' };
+      // Jabatan
+      sheet.mergeCells(`L${sigRow + 2}:M${sigRow + 2}`);
+      sheet.getCell(`L${sigRow + 2}`).value = 'Kepala Desa';
+      sheet.getCell(`L${sigRow + 2}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`L${sigRow + 2}`).alignment = { horizontal: 'center' };
 
-      sheet.mergeCells(`M${sigRow + 7}:Q${sigRow + 7}`);
-      const sigName = sheet.getCell(`M${sigRow + 7}`);
-      sigName.value = '( ............................................ )';
-      sigName.font = { name: 'Arial', size: 9, bold: true };
-      sigName.alignment = { horizontal: 'center' };
+      sheet.mergeCells(`N${sigRow + 2}:O${sigRow + 2}`);
+      sheet.getCell(`N${sigRow + 2}`).value = 'Bidan Desa';
+      sheet.getCell(`N${sigRow + 2}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`N${sigRow + 2}`).alignment = { horizontal: 'center' };
+
+      sheet.mergeCells(`P${sigRow + 2}:Q${sigRow + 2}`);
+      sheet.getCell(`P${sigRow + 2}`).value = 'Kaur Kesra';
+      sheet.getCell(`P${sigRow + 2}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`P${sigRow + 2}`).alignment = { horizontal: 'center' };
+
+      // Nama ttd
+      const kadesName = filter.namaKades?.trim() || '( ........................ )';
+      const bidanName = filter.namaBidan?.trim() || '( ........................ )';
+      const kaurName = filter.namaKaur?.trim() || '( ........................ )';
+
+      sheet.mergeCells(`L${sigRow + 6}:M${sigRow + 6}`);
+      sheet.getCell(`L${sigRow + 6}`).value = kadesName;
+      sheet.getCell(`L${sigRow + 6}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`L${sigRow + 6}`).alignment = { horizontal: 'center' };
+
+      sheet.mergeCells(`N${sigRow + 6}:O${sigRow + 6}`);
+      sheet.getCell(`N${sigRow + 6}`).value = bidanName;
+      sheet.getCell(`N${sigRow + 6}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`N${sigRow + 6}`).alignment = { horizontal: 'center' };
+
+      sheet.mergeCells(`P${sigRow + 6}:Q${sigRow + 6}`);
+      sheet.getCell(`P${sigRow + 6}`).value = kaurName;
+      sheet.getCell(`P${sigRow + 6}`).font = { name: 'Arial', size: 8.5, bold: true };
+      sheet.getCell(`P${sigRow + 6}`).alignment = { horizontal: 'center' };
     };
 
     createLansiaWorksheet('Data Lansia', data);
@@ -601,18 +655,21 @@ export const riwayatService = {
     doc.y = lineY + 7;
 
     const todayFormatted = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const tanggalTtdFormatted = filter.tanggalTtd
+      ? new Date(filter.tanggalTtd).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+      : todayFormatted;
+
     const filterInfoArr = [];
     if (filter.bulan) filterInfoArr.push(`Bulan: ${NAMA_BULAN[filter.bulan - 1]}`);
     if (filter.tahun) filterInfoArr.push(`Tahun: ${filter.tahun}`);
     if (filter.status && filter.status !== 'semua') filterInfoArr.push(`Status: ${filter.status === 'warning' ? 'Perlu Perhatian' : 'Normal'}`);
     if (filter.search) filterInfoArr.push(`Pencarian: "${filter.search}"`);
 
-    const subTitleStr = filterInfoArr.length > 0
-      ? `Filter Aktif: ${filterInfoArr.join(' | ')}   •   Tanggal Cetak: ${todayFormatted}`
-      : `Tanggal Cetak Laporan: ${todayFormatted}`;
-
-    doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b').text(subTitleStr, startX, doc.y, { align: 'left' });
-    doc.moveDown(0.4);
+    const subTitleStr = filterInfoArr.length > 0 ? `Filter Aktif: ${filterInfoArr.join(' | ')}` : '';
+    if (subTitleStr) {
+      doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b').text(subTitleStr, startX, doc.y, { align: 'left' });
+      doc.moveDown(0.4);
+    }
 
     const renderLansiaTable = (items: ItemRiwayat[]) => {
       // Definition of column X coordinates and widths (Total = 781.89 pt)
@@ -719,7 +776,7 @@ export const riwayatService = {
         yPos += 24;
       } else {
         items.forEach((item, idx) => {
-          if (yPos > doc.page.height - 120) {
+          if (yPos > doc.page.height - 60) {
             doc.addPage();
             yPos = 30;
             drawTableHeader(yPos);
@@ -754,26 +811,72 @@ export const riwayatService = {
           doc.font('Helvetica-Bold').text(usiaText, cUsia, yPos + 6, { width: 28, align: 'center' });
           doc.font('Helvetica');
 
-          // Riwayat HT & DM
-          doc.text(item.riwayatHt ? 'Ya' : 'Tdk', cRiwHt, yPos + 6, { width: 24, align: 'center' });
-          doc.text(item.riwayatDm ? 'Ya' : 'Tdk', cRiwDm, yPos + 6, { width: 24, align: 'center' });
+          // Highlight Riwayat HT & DM (Task.md: Beri highlight kategori dengan warna)
+          if (item.riwayatHt) {
+            doc.rect(cRiwHt + 1, yPos + 3, 22, 14).fill('#fee2e2');
+            doc.fillColor('#b91c1c').font('Helvetica-Bold').text('Ya', cRiwHt, yPos + 6, { width: 24, align: 'center' });
+          } else {
+            doc.fillColor('#64748b').text('Tdk', cRiwHt, yPos + 6, { width: 24, align: 'center' });
+          }
+
+          if (item.riwayatDm) {
+            doc.rect(cRiwDm + 1, yPos + 3, 22, 14).fill('#ffedd5');
+            doc.fillColor('#c2410c').font('Helvetica-Bold').text('Ya', cRiwDm, yPos + 6, { width: 24, align: 'center' });
+          } else {
+            doc.fillColor('#64748b').text('Tdk', cRiwDm, yPos + 6, { width: 24, align: 'center' });
+          }
 
           // Pengukuran Fisik (BB, TB, TD)
+          doc.fillColor('#0f172a');
           doc.text(item.beratBadan !== undefined ? String(item.beratBadan) : '-', cBB, yPos + 6, { width: 26, align: 'center' });
           doc.text(item.tinggiBadan !== undefined ? String(item.tinggiBadan) : '-', cTB, yPos + 6, { width: 26, align: 'center' });
-          doc.font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center' });
+
+          // TD Highlight jika Hipertensi (Sistol >= 140 atau Diastol >= 90)
+          const isHipertensi = (item.tekananDarahSistol || 0) >= 140 || (item.tekananDarahDiastol || 0) >= 90;
+          if (isHipertensi && tdText !== '-') {
+            doc.rect(cTD + 1, yPos + 2, 44, 16).fill('#fee2e2');
+            doc.fillColor('#991b1b').font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center' });
+          } else {
+            doc.fillColor('#0f172a').font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center' });
+          }
           doc.font('Helvetica');
 
-          // Laboratorium & Lingkar Perut
+          // Laboratorium & Lingkar Perut dengan Color Highlights
+          const gdsNum = item.gulaDarahSewaktu !== undefined ? Number(item.gulaDarahSewaktu) : 0;
+          const isGdsTinggi = gdsNum >= 200;
           const gdsStr = item.gulaDarahSewaktu !== undefined ? String(item.gulaDarahSewaktu) : '-';
-          const kolestStr = item.kolesterol !== undefined ? String(item.kolesterol) : '-';
-          const asamUratStr = item.asamUrat !== undefined ? String(item.asamUrat) : '-';
-          const lpStr = item.lingkarPerut !== undefined ? String(item.lingkarPerut) : '-';
 
-          doc.text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center' });
-          doc.text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center' });
-          doc.text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center' });
-          doc.text(lpStr, cLPerut, yPos + 6, { width: 36, align: 'center' });
+          if (isGdsTinggi && gdsStr !== '-') {
+            doc.rect(cGds + 1, yPos + 2, 36, 16).fill('#fef3c7');
+            doc.fillColor('#92400e').font('Helvetica-Bold').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center' });
+          } else {
+            doc.fillColor('#0f172a').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center' });
+          }
+
+          const kolestNum = item.kolesterol !== undefined ? Number(item.kolesterol) : 0;
+          const isKolestTinggi = kolestNum >= 200;
+          const kolestStr = item.kolesterol !== undefined ? String(item.kolesterol) : '-';
+
+          if (isKolestTinggi && kolestStr !== '-') {
+            doc.rect(cKolest + 1, yPos + 2, 38, 16).fill('#f3e8ff');
+            doc.fillColor('#6b21a8').font('Helvetica-Bold').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center' });
+          } else {
+            doc.fillColor('#0f172a').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center' });
+          }
+
+          const asamUratNum = item.asamUrat !== undefined ? Number(item.asamUrat) : 0;
+          const isAsamUratTinggi = asamUratNum >= 7;
+          const asamUratStr = item.asamUrat !== undefined ? String(item.asamUrat) : '-';
+
+          if (isAsamUratTinggi && asamUratStr !== '-') {
+            doc.rect(cAsamUrat + 1, yPos + 2, 38, 16).fill('#e0f2fe');
+            doc.fillColor('#0369a1').font('Helvetica-Bold').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center' });
+          } else {
+            doc.fillColor('#0f172a').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center' });
+          }
+
+          const lpStr = item.lingkarPerut !== undefined ? String(item.lingkarPerut) : '-';
+          doc.fillColor('#0f172a').text(lpStr, cLPerut, yPos + 6, { width: 36, align: 'center' });
 
           // Keluhan & Tindakan Medis - Terpisah, Efisien, & Bounded tanpa overflow
           const keluhan = item.keluhan?.trim() || '-';
@@ -903,32 +1006,78 @@ export const riwayatService = {
     renderLansiaTable(data);
     renderSummaryBox(data);
 
-    // Signature Block di bagian kanan bawah
-    let finalY = doc.y;
-    if (finalY > doc.page.height - 145) {
+    // Ambil semua kader posyandu yang aktif untuk tanda tangan sebelah kiri
+    const kaders = await prisma.kader.findMany({
+      where: { posyanduId, isActive: true },
+      orderBy: { nama: 'asc' },
+    });
+
+    // Signature Block (Task.md: Kader di kiri, Kades/Bidan/Kaur di kanan, tanggal tanda tangan bisa diedit)
+    const requiredSigHeight = Math.max(90, 30 + Math.min(kaders.length, 6) * 16);
+    let finalY = doc.y + 10;
+    if (finalY + requiredSigHeight > doc.page.height - 35) {
       doc.addPage();
       finalY = 35;
     }
 
-    finalY += 8;
-    const signX = endX - 220;
+    // ─────────────────────────────────────────────────────────────
+    // TANDA TANGAN SEMUA KADER TERDAFTAR (SEBELAH KIRI)
+    // ─────────────────────────────────────────────────────────────
+    doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#0f172a');
+    doc.text('Kader Posyandu Lansia:', startX, finalY, { width: 340, lineBreak: false });
 
+    let kaderY = finalY + 14;
+    if (kaders.length === 0) {
+      doc.fontSize(8).font('Helvetica').fillColor('#64748b');
+      doc.text('1. ( ............................................ )', startX + 5, kaderY, { width: 300 });
+    } else {
+      kaders.slice(0, 6).forEach((kader, kIdx) => {
+        doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b');
+        doc.text(`${kIdx + 1}. ${kader.nama}`, startX + 5, kaderY, { width: 170, lineBreak: false });
+        doc.text('( ....................................... )', startX + 180, kaderY, { width: 140, lineBreak: false });
+        kaderY += 15;
+      });
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // TANDA TANGAN KEPALA DESA, BIDAN, KAUR (SEBELAH KANAN)
+    // ─────────────────────────────────────────────────────────────
+    const rightX = endX - 380;
     doc.fontSize(8.5).font('Helvetica').fillColor('#0f172a');
-    doc.text(`${posyandu.desa || 'Desa'}, ${todayFormatted}`, signX, finalY, { align: 'center', width: 220, lineBreak: false });
-    doc.text('Mengetahui,', signX, finalY + 11, { align: 'center', width: 220, lineBreak: false });
-    doc.font('Helvetica-Bold').text('Ketua / Kader Posyandu', signX, finalY + 22, { align: 'center', width: 220, lineBreak: false });
+    doc.text(`${posyandu.desa || 'Desa'}, ${tanggalTtdFormatted}`, rightX, finalY, { align: 'center', width: 380, lineBreak: false });
+    doc.text('Mengetahui,', rightX, finalY + 11, { align: 'center', width: 380, lineBreak: false });
 
-    doc.font('Helvetica-Bold').text('( ............................................ )', signX, finalY + 82, { align: 'center', width: 220, lineBreak: false });
+    const colW = 120;
+    const colGap = 8;
+    const col1X = rightX;
+    const col2X = rightX + colW + colGap;
+    const col3X = rightX + (colW + colGap) * 2;
 
-    // Page Numbers Footer
+    const roleY = finalY + 24;
+    doc.font('Helvetica-Bold').fontSize(7.5);
+    doc.text('Kepala Desa', col1X, roleY, { width: colW, align: 'center', lineBreak: false });
+    doc.text('Bidan Desa', col2X, roleY, { width: colW, align: 'center', lineBreak: false });
+    doc.text('Kaur Kesra', col3X, roleY, { width: colW, align: 'center', lineBreak: false });
+
+    const nameY = finalY + 68;
+    const kadesName = filter.namaKades?.trim() || '( ................................. )';
+    const bidanName = filter.namaBidan?.trim() || '( ................................. )';
+    const kaurName = filter.namaKaur?.trim() || '( ................................. )';
+
+    doc.font('Helvetica-Bold').fontSize(7.5);
+    doc.text(kadesName, col1X, nameY, { width: colW, align: 'center', lineBreak: false });
+    doc.text(bidanName, col2X, nameY, { width: colW, align: 'center', lineBreak: false });
+    doc.text(kaurName, col3X, nameY, { width: colW, align: 'center', lineBreak: false });
+
+    // Page Numbers & Print Date Footer (Task.md: Tanggal print dokumen ditaruh di footer terakhir)
     const pages = doc.bufferedPageRange().count;
     doc.page.margins.bottom = 0;
     for (let i = 0; i < pages; i++) {
       doc.switchToPage(i);
-      doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b').text(
-        `Halaman ${i + 1} dari ${pages} — Sistem Informasi Posyandu (Format Landscape Register Resmi)`,
+      doc.fontSize(7).font('Helvetica-Oblique').fillColor('#64748b').text(
+        `Dicetak pada: ${todayFormatted}  •  Halaman ${i + 1} dari ${pages} — Sistem Informasi Posyandu Lansia (SIKALANSIA)`,
         startX,
-        doc.page.height - 22,
+        doc.page.height - 18,
         { align: 'center', width: printableWidth, lineBreak: false }
       );
     }

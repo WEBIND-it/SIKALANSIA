@@ -919,14 +919,91 @@ export default function LansiaLaporanView({
                         )}
                         <td className="px-3 py-2.5 text-gray-600 font-semibold whitespace-nowrap">{log.jenisKelamin || "-"}</td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{usiaTahun !== "-" ? `${usiaTahun} th` : "-"}</td>
-                        <td className="px-3 py-2.5 text-gray-600 font-semibold whitespace-nowrap">{(log as any).riwayatHt ? "Ya" : "Tdk"}</td>
-                        <td className="px-3 py-2.5 text-gray-600 font-semibold whitespace-nowrap">{(log as any).riwayatDm ? "Ya" : "Tdk"}</td>
-                        <td className="px-3 py-2.5 text-gray-900 font-bold whitespace-nowrap">
-                          {sistol && diastol ? `${sistol}/${diastol} mmHg` : "-"}
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {(log as any).riwayatHt ? (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                              Ya
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 font-medium text-[11px]">Tdk</span>
+                          )}
                         </td>
-                        <td className="px-3 py-2.5 text-gray-900 font-bold whitespace-nowrap">{gds ? `${gds} mg/dL` : "-"}</td>
-                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{log.kolesterol ? `${log.kolesterol} mg/dL` : "-"}</td>
-                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{log.asamUrat ? `${log.asamUrat} mg/dL` : "-"}</td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {(log as any).riwayatDm ? (
+                            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                              Ya
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 font-medium text-[11px]">Tdk</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {sistol && diastol ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[11px] inline-block ${
+                                sistol >= 160 || diastol >= 100
+                                  ? "bg-rose-100 text-rose-900 border border-rose-300 font-bold"
+                                  : sistol >= 140 || diastol >= 90
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200 font-bold"
+                                  : sistol >= 120 || diastol >= 80
+                                  ? "bg-amber-50 text-amber-700 border border-amber-200 font-semibold"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium"
+                              }`}
+                            >
+                              {sistol}/{diastol} mmHg
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {gds > 0 ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[11px] inline-block ${
+                                gds >= 200
+                                  ? "bg-amber-100 text-amber-900 border border-amber-300 font-bold"
+                                  : gds >= 140
+                                  ? "bg-yellow-50 text-yellow-800 border border-yellow-200 font-semibold"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium"
+                              }`}
+                            >
+                              {gds} mg/dL
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {log.kolesterol && log.kolesterol > 0 ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[11px] inline-block ${
+                                log.kolesterol >= 200
+                                  ? "bg-purple-100 text-purple-900 border border-purple-300 font-bold"
+                                  : "bg-slate-50 text-slate-700 border border-slate-200 font-medium"
+                              }`}
+                            >
+                              {log.kolesterol} mg/dL
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {log.asamUrat && log.asamUrat > 0 ? (
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[11px] inline-block ${
+                                (log.jenisKelamin === "L" && log.asamUrat > 7.0) ||
+                                (log.jenisKelamin === "P" && log.asamUrat > 6.0)
+                                  ? "bg-sky-100 text-sky-900 border border-sky-300 font-bold"
+                                  : "bg-slate-50 text-slate-700 border border-slate-200 font-medium"
+                              }`}
+                            >
+                              {log.asamUrat} mg/dL
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">{log.lingkarPerut ? `${log.lingkarPerut} cm` : "-"}</td>
                         <td className="px-3 py-2.5 text-gray-700 max-w-[160px] truncate" title={log.keluhan || "-"}>
                           {log.keluhan || "-"}

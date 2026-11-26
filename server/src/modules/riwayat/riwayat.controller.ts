@@ -29,12 +29,16 @@ export const getRiwayat = async (req: Request, res: Response, next: NextFunction
 export const exportRiwayatExcel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const posyanduId = req.params.posyanduId as string;
-    const { tipe, search, status, bulan, tahun } = req.query as {
+    const { tipe, search, status, bulan, tahun, tanggalTtd, namaKades, namaBidan, namaKaur } = req.query as {
       tipe?: 'semua' | 'Lansia';
       search?: string;
       status?: 'semua' | 'success' | 'warning';
       bulan?: string;
       tahun?: string;
+      tanggalTtd?: string;
+      namaKades?: string;
+      namaBidan?: string;
+      namaKaur?: string;
     };
 
     if (!posyanduId) {
@@ -58,6 +62,10 @@ export const exportRiwayatExcel = async (req: Request, res: Response, next: Next
       status,
       bulan: bulan ? Number(bulan) : undefined,
       tahun: tahun ? Number(tahun) : undefined,
+      tanggalTtd,
+      namaKades,
+      namaBidan,
+      namaKaur,
     });
 
     res.setHeader(
@@ -83,12 +91,16 @@ export const exportRiwayatExcel = async (req: Request, res: Response, next: Next
 export const exportRiwayatPdf = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const posyanduId = req.params.posyanduId as string;
-    const { tipe, search, status, bulan, tahun } = req.query as {
+    const { tipe, search, status, bulan, tahun, tanggalTtd, namaKades, namaBidan, namaKaur } = req.query as {
       tipe?: 'semua' | 'Lansia';
       search?: string;
       status?: 'semua' | 'success' | 'warning';
       bulan?: string;
       tahun?: string;
+      tanggalTtd?: string;
+      namaKades?: string;
+      namaBidan?: string;
+      namaKaur?: string;
     };
 
     if (!posyanduId) {
@@ -112,6 +124,10 @@ export const exportRiwayatPdf = async (req: Request, res: Response, next: NextFu
       status,
       bulan: bulan ? Number(bulan) : undefined,
       tahun: tahun ? Number(tahun) : undefined,
+      tanggalTtd,
+      namaKades,
+      namaBidan,
+      namaKaur,
     });
 
     res.setHeader('Content-Type', 'application/pdf');

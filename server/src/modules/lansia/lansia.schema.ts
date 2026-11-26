@@ -42,6 +42,7 @@ export const createPemeriksaanLansiaSchema = z.object({
   keluhan: z.string().optional().nullable(),
   tindakan: z.string().optional().nullable(),
   petugas: z.string().optional().nullable(),
+  usedStokIds: z.array(z.string().uuid()).optional(),
 });
 
 export const updatePemeriksaanLansiaSchema = createPemeriksaanLansiaSchema.partial();

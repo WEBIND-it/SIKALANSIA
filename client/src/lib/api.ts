@@ -255,16 +255,41 @@ export interface AktivitasKunjunganData {
 }
 
 export const dashboardApi = {
-  getSummary: (posyanduId: string) =>
-    request<ApiResponse<DashboardSummary>>(`/api/dashboard/${posyanduId}`),
+  getSummary: (posyanduId: string, params?: { bulan?: number | string; tahun?: number | string }) => {
+    const q = new URLSearchParams();
+    if (params?.bulan) q.append('bulan', String(params.bulan));
+    if (params?.tahun) q.append('tahun', String(params.tahun));
+    const qs = q.toString();
+    return request<ApiResponse<DashboardSummary>>(`/api/dashboard/${posyanduId}${qs ? `?${qs}` : ''}`);
+  },
   getTrenGizi: (posyanduId: string, period: 'bulanan' | 'tahunan' = 'bulanan') =>
     request<ApiResponse<TrenGiziItem[]>>(`/api/dashboard/${posyanduId}/tren-gizi?period=${period}`),
-  getDistribusiKehadiran: (posyanduId: string, kategori?: string) =>
-    request<ApiResponse<DistribusiKehadiran[]>>(
-      `/api/dashboard/${posyanduId}/distribusi-kehadiran${kategori ? `?kategori=${kategori}` : ''}`
-    ),
-  getAktivitasKunjungan: (posyanduId: string) =>
-    request<ApiResponse<AktivitasKunjunganData>>(`/api/dashboard/${posyanduId}/aktivitas-kunjungan`),
+  getDistribusiKehadiran: (
+    posyanduId: string,
+    paramsOrKategori?: string | { bulan?: number | string; tahun?: number | string },
+    params?: { bulan?: number | string; tahun?: number | string }
+  ) => {
+    const q = new URLSearchParams();
+    if (typeof paramsOrKategori === 'string') {
+      if (paramsOrKategori) q.append('kategori', paramsOrKategori);
+      if (params?.bulan) q.append('bulan', String(params.bulan));
+      if (params?.tahun) q.append('tahun', String(params.tahun));
+    } else if (paramsOrKategori && typeof paramsOrKategori === 'object') {
+      if (paramsOrKategori.bulan) q.append('bulan', String(paramsOrKategori.bulan));
+      if (paramsOrKategori.tahun) q.append('tahun', String(paramsOrKategori.tahun));
+    }
+    const qs = q.toString();
+    return request<ApiResponse<DistribusiKehadiran[]>>(
+      `/api/dashboard/${posyanduId}/distribusi-kehadiran${qs ? `?${qs}` : ''}`
+    );
+  },
+  getAktivitasKunjungan: (posyanduId: string, params?: { bulan?: number | string; tahun?: number | string }) => {
+    const q = new URLSearchParams();
+    if (params?.bulan) q.append('bulan', String(params.bulan));
+    if (params?.tahun) q.append('tahun', String(params.tahun));
+    const qs = q.toString();
+    return request<ApiResponse<AktivitasKunjunganData>>(`/api/dashboard/${posyanduId}/aktivitas-kunjungan${qs ? `?${qs}` : ''}`);
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -320,7 +345,7 @@ export const lansiaApi = {
   getPemeriksaan: (posyanduId: string, lansiaId: string) =>
     request<ApiResponse<PemeriksaanLansia[]>>(`/api/posyandu/${posyanduId}/lansia/${lansiaId}/pemeriksaan`),
 
-  createPemeriksaan: (posyanduId: string, lansiaId: string, data: Omit<PemeriksaanLansia, 'id'>) =>
+  createPemeriksaan: (posyanduId: string, lansiaId: string, data: Omit<PemeriksaanLansia, 'id'> & { usedStokIds?: string[] }) =>
     request<ApiResponse<PemeriksaanLansia>>(`/api/posyandu/${posyanduId}/lansia/${lansiaId}/pemeriksaan`, {
       method: 'POST',
       body: JSON.stringify(data),
@@ -389,7 +414,17 @@ export const riwayatApi = {
 
   downloadExcel: async (
     posyanduId: string,
-    params?: { tipe?: string; search?: string; status?: string; bulan?: string; tahun?: string }
+    params?: {
+      tipe?: string;
+      search?: string;
+      status?: string;
+      bulan?: string;
+      tahun?: string;
+      tanggalTtd?: string;
+      namaKades?: string;
+      namaBidan?: string;
+      namaKaur?: string;
+    }
   ) => {
     const token = getToken();
     const cleanParams: Record<string, string> = {};
@@ -420,7 +455,17 @@ export const riwayatApi = {
 
   downloadPdf: async (
     posyanduId: string,
-    params?: { tipe?: string; search?: string; status?: string; bulan?: string; tahun?: string }
+    params?: {
+      tipe?: string;
+      search?: string;
+      status?: string;
+      bulan?: string;
+      tahun?: string;
+      tanggalTtd?: string;
+      namaKades?: string;
+      namaBidan?: string;
+      namaKaur?: string;
+    }
   ) => {
     const token = getToken();
     const cleanParams: Record<string, string> = {};
@@ -451,7 +496,17 @@ export const riwayatApi = {
 
   getPdfBlobUrl: async (
     posyanduId: string,
-    params?: { tipe?: string; search?: string; status?: string; bulan?: string; tahun?: string }
+    params?: {
+      tipe?: string;
+      search?: string;
+      status?: string;
+      bulan?: string;
+      tahun?: string;
+      tanggalTtd?: string;
+      namaKades?: string;
+      namaBidan?: string;
+      namaKaur?: string;
+    }
   ): Promise<{ url: string; blob: Blob }> => {
     const token = getToken();
     const cleanParams: Record<string, string> = {};
@@ -553,6 +608,120 @@ export const periodeApi = {
 
   delete: (posyanduId: string, id: string) =>
     request<ApiResponse<null>>(`/api/posyandu/${posyanduId}/periode/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ─────────────────────────────────────────────────────────────
+// API: MONITORING ASET POSYANDU
+// ─────────────────────────────────────────────────────────────
+
+export type KondisiAset = 'BAIK' | 'RUSAK_RINGAN' | 'RUSAK_BERAT';
+
+export interface Aset {
+  id: string;
+  posyanduId: string;
+  nama: string;
+  foto?: string | null;
+  stok: number;
+  kondisi: KondisiAset;
+  tanggalMasukBaru?: string | null;
+  tanggalMasukSebelumnya?: string | null;
+  catatan?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AsetSummary {
+  totalJenis: number;
+  totalUnit: number;
+  totalBaik: number;
+  totalRusakRingan: number;
+  totalRusakBerat: number;
+}
+
+export const asetApi = {
+  getAll: (posyanduId: string, params?: { search?: string; kondisi?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.kondisi && params.kondisi !== 'semua') q.append('kondisi', params.kondisi);
+    const qs = q.toString();
+    return request<ApiResponse<Aset[]>>(`/api/posyandu/${posyanduId}/aset${qs ? `?${qs}` : ''}`);
+  },
+  getSummary: (posyanduId: string) =>
+    request<ApiResponse<AsetSummary>>(`/api/posyandu/${posyanduId}/aset/summary`),
+  getById: (posyanduId: string, id: string) =>
+    request<ApiResponse<Aset>>(`/api/posyandu/${posyanduId}/aset/${id}`),
+  create: (posyanduId: string, data: Partial<Aset>) =>
+    request<ApiResponse<Aset>>(`/api/posyandu/${posyanduId}/aset`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (posyanduId: string, id: string, data: Partial<Aset>) =>
+    request<ApiResponse<Aset>>(`/api/posyandu/${posyanduId}/aset/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  delete: (posyanduId: string, id: string) =>
+    request<ApiResponse<null>>(`/api/posyandu/${posyanduId}/aset/${id}`, {
+      method: 'DELETE',
+    }),
+};
+
+// ─────────────────────────────────────────────────────────────
+// API: MONITORING STOK PEMBERIAN PERLAKUAN
+// ─────────────────────────────────────────────────────────────
+
+export interface StokPerlakuan {
+  id: string;
+  posyanduId: string;
+  namaBarang: string;
+  stokTersedia: number;
+  terpakai: number;
+  sisa: number;
+  satuan: string;
+  kategori?: string | null;
+  catatan?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface StokPerlakuanSummary {
+  totalJenis: number;
+  totalTersedia: number;
+  totalTerpakai: number;
+  totalSisa: number;
+}
+
+export const stokPerlakuanApi = {
+  getAll: (posyanduId: string, params?: { search?: string; kategori?: string }) => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append('search', params.search);
+    if (params?.kategori && params.kategori !== 'semua') q.append('kategori', params.kategori);
+    const qs = q.toString();
+    return request<ApiResponse<StokPerlakuan[]>>(`/api/posyandu/${posyanduId}/stok-perlakuan${qs ? `?${qs}` : ''}`);
+  },
+  getSummary: (posyanduId: string) =>
+    request<ApiResponse<StokPerlakuanSummary>>(`/api/posyandu/${posyanduId}/stok-perlakuan/summary`),
+  getById: (posyanduId: string, id: string) =>
+    request<ApiResponse<StokPerlakuan>>(`/api/posyandu/${posyanduId}/stok-perlakuan/${id}`),
+  create: (posyanduId: string, data: Partial<StokPerlakuan>) =>
+    request<ApiResponse<StokPerlakuan>>(`/api/posyandu/${posyanduId}/stok-perlakuan`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  update: (posyanduId: string, id: string, data: Partial<StokPerlakuan>) =>
+    request<ApiResponse<StokPerlakuan>>(`/api/posyandu/${posyanduId}/stok-perlakuan/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  recordUsage: (posyanduId: string, id: string, data: { jumlah: number; catatan?: string }) =>
+    request<ApiResponse<StokPerlakuan>>(`/api/posyandu/${posyanduId}/stok-perlakuan/${id}/pakai`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  delete: (posyanduId: string, id: string) =>
+    request<ApiResponse<null>>(`/api/posyandu/${posyanduId}/stok-perlakuan/${id}`, {
       method: 'DELETE',
     }),
 };

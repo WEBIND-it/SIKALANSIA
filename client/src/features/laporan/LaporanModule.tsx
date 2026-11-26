@@ -121,6 +121,14 @@ export default function LaporanModule({
   const [pageSizeLansia, setPageSizeLansia] = useState<number>(10);
   const [pageLansia, setPageLansia] = useState<number>(1);
 
+  // State Pengaturan Tanda Tangan & Pejabat Desa
+  const [tanggalTtd, setTanggalTtd] = useState<string>(() =>
+    new Date().toISOString().slice(0, 10)
+  );
+  const [namaKades, setNamaKades] = useState<string>("H. Ahmad Supriyadi");
+  const [namaBidan, setNamaBidan] = useState<string>("Bd. Siti Nurhaliza, S.Tr.Keb");
+  const [namaKaur, setNamaKaur] = useState<string>("Bambang Wijaya");
+
   // State Pratinjau Laporan (PDF Modal Preview)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -170,6 +178,10 @@ export default function LaporanModule({
         bulan: filterMonth || undefined,
         tahun: filterYear || undefined,
         search: searchLansia || undefined,
+        tanggalTtd: tanggalTtd || undefined,
+        namaKades: namaKades || undefined,
+        namaBidan: namaBidan || undefined,
+        namaKaur: namaKaur || undefined,
       });
     } catch (err) {
       console.error("Gagal export PDF:", err);
@@ -213,6 +225,10 @@ export default function LaporanModule({
         bulan: filterMonth || undefined,
         tahun: filterYear || undefined,
         search: searchLansia || undefined,
+        tanggalTtd: tanggalTtd || undefined,
+        namaKades: namaKades || undefined,
+        namaBidan: namaBidan || undefined,
+        namaKaur: namaKaur || undefined,
       });
       setPreviewPdfUrl(url);
       setPreviewPdfBlob(blob);
@@ -260,13 +276,16 @@ export default function LaporanModule({
     setPageLansia(1);
   }, [logs, filterFromDate, filterToDate, totalLansiaTerdaftar, periodeText]);
 
-  // Filter data Lansia berdasarkan search & tanggal
+  // Filter data Lansia berdasarkan search & tanggal, serta urutkan A-Z
   const filteredLansiaLogs = useMemo(() => {
     const source = searchLansia.trim()
       ? lansiaIndexRef.current.search(searchLansia)
       : logs.filter((l) => l.tipe === "Lansia");
 
-    return filterLogsByDateRange(source, filterFromDate, filterToDate);
+    const filtered = filterLogsByDateRange(source, filterFromDate, filterToDate);
+    return [...filtered].sort((a, b) =>
+      (a.nama || "").localeCompare(b.nama || "", "id", { sensitivity: "base" })
+    );
   }, [logs, searchLansia, filterFromDate, filterToDate]);
 
   const currentYear = new Date().getFullYear();
@@ -348,6 +367,14 @@ export default function LaporanModule({
         onExportExcel={handleExportExcel}
         isExportingExcel={exportingExcel}
         isExportingPdf={exportingPdf}
+        tanggalTtd={tanggalTtd}
+        setTanggalTtd={setTanggalTtd}
+        namaKades={namaKades}
+        setNamaKades={setNamaKades}
+        namaBidan={namaBidan}
+        setNamaBidan={setNamaBidan}
+        namaKaur={namaKaur}
+        setNamaKaur={setNamaKaur}
       />
 
       {/* Tampilan Rekapan Lansia */}

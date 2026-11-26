@@ -1,18 +1,54 @@
 import prisma from '../../shared/config/prisma';
 import cacheService from '../../shared/services/cache.service';
 
+const NAMA_BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
 export const dashboardService = {
   /**
-   * Mengambil semua metrik ringkasan untuk satu posyandu lansia.
+   * Mengambil semua metrik ringkasan untuk satu posyandu lansia sesuai periode/bulan.
    */
-  async getSummary(posyanduId: string) {
-    return cacheService.getOrSet(`dashboard:summary:${posyanduId}`, async () => {
+  async getSummary(posyanduId: string, bulan?: number, tahun?: number) {
+    const cacheKey = `dashboard:summary:${posyanduId}:${bulan || 'act'}:${tahun || 'act'}`;
+    return cacheService.getOrSet(cacheKey, async () => {
+      // Dapatkan active periode jika bulan/tahun tidak dispesifikasikan
+      let targetMonth = bulan;
+      let targetYear = tahun;
+
+      if (!targetMonth || !targetYear) {
+        const activePeriode = await prisma.periodePelayanan.findFirst({
+          where: { posyanduId, status: 'AKTIF' },
+          orderBy: { tanggal: 'desc' },
+        });
+
+        const now = new Date();
+        targetMonth = targetMonth || (activePeriode ? activePeriode.bulan : now.getMonth() + 1);
+        targetYear = targetYear || (activePeriode ? activePeriode.tahun : now.getFullYear());
+      }
+
+      const namaBulan = NAMA_BULAN[targetMonth - 1] || `Bulan ${targetMonth}`;
+      const periodeLabel = `${namaBulan} ${targetYear}`;
+
+      const startDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1));
+      const endDate = new Date(Date.UTC(targetYear, targetMonth, 0, 23, 59, 59, 999));
+
       const [
         totalLansia,
-        pemeriksaanLansiaTerbaru,
+        pemeriksaanBulanIni,
+        pemeriksaanTerbaru,
         lansiaHtDm,
       ] = await Promise.all([
         prisma.lansia.count({ where: { posyanduId } }),
+        prisma.pemeriksaanLansia.findMany({
+          where: {
+            lansia: { posyanduId },
+            tanggalPeriksa: { gte: startDate, lte: endDate },
+          },
+          include: { lansia: { select: { nama: true, tanggalLahir: true } } },
+          orderBy: { tanggalPeriksa: 'desc' },
+        }),
         prisma.pemeriksaanLansia.findMany({
           where: { lansia: { posyanduId } },
           orderBy: { tanggalPeriksa: 'desc' },
@@ -29,11 +65,34 @@ export const dashboardService = {
       const totalDm = lansiaHtDm.filter((l) => l.riwayatDm).length;
       const totalHtDm = lansiaHtDm.filter((l) => l.riwayatHt && l.riwayatDm).length;
 
+      // Unik lansia yang hadir di bulan/periode ini
+      const uniqueLansiaHadir = new Set(pemeriksaanBulanIni.map((p) => p.lansiaId)).size;
+      const persentaseKehadiran = totalLansia > 0 ? Math.round((uniqueLansiaHadir / totalLansia) * 100) : 0;
+
+      // Hitung kasus abnormal di periode ini
+      const kasusHtPeriode = pemeriksaanBulanIni.filter((p) => p.tekananDarahSistol >= 140 || p.tekananDarahDiastol >= 90).length;
+      const kasusDmPeriode = pemeriksaanBulanIni.filter((p) => Number(p.gulaDarahSewaktu) >= 200).length;
+
       return {
         totalLansia,
+        periode: {
+          bulan: targetMonth,
+          tahun: targetYear,
+          namaBulan,
+          periodeLabel,
+        },
+        kehadiranPeriode: {
+          totalHadir: uniqueLansiaHadir,
+          totalPemeriksaan: pemeriksaanBulanIni.length,
+          persentase: persentaseKehadiran,
+        },
+        kondisiPeriode: {
+          kasusHt: kasusHtPeriode,
+          kasusDm: kasusDmPeriode,
+        },
         lansiaHtDm: { totalHt, totalDm, totalHtDm },
         pemeriksaanTerbaru: {
-          lansia: pemeriksaanLansiaTerbaru,
+          lansia: pemeriksaanTerbaru,
         },
       };
     }, 180);
@@ -47,25 +106,31 @@ export const dashboardService = {
   },
 
   /**
-   * Agregasi distribusi kehadiran per RT/RW untuk lansia
+   * Agregasi distribusi kehadiran per RT/RW untuk lansia sesuai periode
    */
-  async getDistribusiKehadiran(posyanduId: string, _kategori?: string) {
-    return cacheService.getOrSet(`dashboard:kehadiran:${posyanduId}`, async () => {
+  async getDistribusiKehadiran(posyanduId: string, _kategori?: string, bulan?: number, tahun?: number) {
+    const cacheKey = `dashboard:kehadiran:${posyanduId}:${bulan || 'act'}:${tahun || 'act'}`;
+    return cacheService.getOrSet(cacheKey, async () => {
       const lansias = await prisma.lansia.findMany({
         where: { posyanduId },
         select: { id: true, rtRw: true },
       });
 
-      const activePeriode = await prisma.periodePelayanan.findFirst({
-        where: { posyanduId, status: 'AKTIF' },
-        orderBy: { tanggal: 'desc' },
-      });
+      let targetMonth = bulan;
+      let targetYear = tahun;
 
-      const now = new Date();
-      const targetMonth = activePeriode ? activePeriode.bulan : (now.getMonth() + 1);
-      const targetYear = activePeriode ? activePeriode.tahun : now.getFullYear();
+      if (!targetMonth || !targetYear) {
+        const activePeriode = await prisma.periodePelayanan.findFirst({
+          where: { posyanduId, status: 'AKTIF' },
+          orderBy: { tanggal: 'desc' },
+        });
 
-      // Fetch pemeriksaan Lansia pada periode aktif
+        const now = new Date();
+        targetMonth = targetMonth || (activePeriode ? activePeriode.bulan : now.getMonth() + 1);
+        targetYear = targetYear || (activePeriode ? activePeriode.tahun : now.getFullYear());
+      }
+
+      // Fetch pemeriksaan Lansia pada periode target
       const lansiaExams = await prisma.pemeriksaanLansia.findMany({
         where: { lansia: { posyanduId } },
         orderBy: { tanggalPeriksa: 'desc' },
@@ -140,16 +205,30 @@ export const dashboardService = {
   },
 
   /**
-   * Agregasi Aktivitas Kunjungan khusus Lansia
+   * Agregasi Aktivitas Kunjungan khusus Lansia sesuai periode
    */
-  async getAktivitasKunjungan(posyanduId: string) {
-    return cacheService.getOrSet(`dashboard:aktivitas:${posyanduId}`, async () => {
+  async getAktivitasKunjungan(posyanduId: string, bulan?: number, tahun?: number) {
+    const cacheKey = `dashboard:aktivitas:${posyanduId}:${bulan || 'act'}:${tahun || 'act'}`;
+    return cacheService.getOrSet(cacheKey, async () => {
+      let targetMonth = bulan;
+      let targetYear = tahun;
+
+      if (!targetMonth || !targetYear) {
+        const activePeriode = await prisma.periodePelayanan.findFirst({
+          where: { posyanduId, status: 'AKTIF' },
+          orderBy: { tanggal: 'desc' },
+        });
+
+        const now = new Date();
+        targetMonth = targetMonth || (activePeriode ? activePeriode.bulan : now.getMonth() + 1);
+        targetYear = targetYear || (activePeriode ? activePeriode.tahun : now.getFullYear());
+      }
+
       const lansias = await prisma.lansia.findMany({
         where: { posyanduId },
         include: {
           pemeriksaans: {
             orderBy: { tanggalPeriksa: 'desc' },
-            take: 1,
           },
         },
       });
@@ -176,27 +255,20 @@ export const dashboardService = {
         detailPemeriksaan?: string | null;
       }> = [];
 
-      const activePeriode = await prisma.periodePelayanan.findFirst({
-        where: { posyanduId, status: 'AKTIF' },
-        orderBy: { tanggal: 'desc' },
-      });
-
       const now = new Date();
-      const targetMonth = activePeriode ? activePeriode.bulan : (now.getMonth() + 1);
-      const targetYear = activePeriode ? activePeriode.tahun : now.getFullYear();
 
       lansias.forEach((l) => {
         const birthDate = new Date(l.tanggalLahir);
         const ageYears = Math.floor((now.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25));
-        const latestExam = l.pemeriksaans[0];
         const detailInfo = `Usia ${ageYears} Thn • ${l.rtRw || 'RT/RW -'}`;
 
-        const examDate = latestExam ? new Date(latestExam.tanggalPeriksa) : null;
-        const isExamInCurrentPeriod = examDate && 
-          (examDate.getMonth() + 1) === targetMonth && 
-          examDate.getFullYear() === targetYear;
+        // Cari pemeriksaan pada targetMonth dan targetYear
+        const examInPeriod = l.pemeriksaans.find((exam) => {
+          const d = new Date(exam.tanggalPeriksa);
+          return (d.getMonth() + 1) === targetMonth && d.getFullYear() === targetYear;
+        });
 
-        if (latestExam && isExamInCurrentPeriod) {
+        if (examInPeriod) {
           lansiaSelesaiList.push({
             id: l.id,
             nama: l.nama,
@@ -204,8 +276,8 @@ export const dashboardService = {
             jenisKelamin: l.jenisKelamin,
             detailInfo,
             statusPeriksa: 'Selesai Periksa',
-            tanggalPeriksa: latestExam.tanggalPeriksa.toISOString().split('T')[0],
-            detailPemeriksaan: `TD: ${latestExam.tekananDarahSistol}/${latestExam.tekananDarahDiastol} mmHg, GDS: ${latestExam.gulaDarahSewaktu || '-'}`,
+            tanggalPeriksa: examInPeriod.tanggalPeriksa.toISOString().split('T')[0],
+            detailPemeriksaan: `TD: ${examInPeriod.tekananDarahSistol}/${examInPeriod.tekananDarahDiastol} mmHg, GDS: ${examInPeriod.gulaDarahSewaktu || '-'}`,
           });
         } else {
           belumMengisiList.push({
@@ -216,7 +288,7 @@ export const dashboardService = {
             detailInfo,
             statusPeriksa: 'Belum Mengisi Data',
             tanggalPeriksa: null,
-            detailPemeriksaan: 'Belum ada data pemeriksaan',
+            detailPemeriksaan: 'Belum ada data pemeriksaan periode ini',
           });
         }
       });
@@ -227,6 +299,9 @@ export const dashboardService = {
       const persentaseSelesai = totalSasaran > 0 ? Math.round((lansiaSelesaiCount / totalSasaran) * 100) : 0;
 
       return {
+        targetMonth,
+        targetYear,
+        namaBulan: NAMA_BULAN[targetMonth - 1],
         lansiaSelesaiCount,
         belumMengisiCount,
         totalSasaran,

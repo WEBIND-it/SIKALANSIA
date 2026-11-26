@@ -11,6 +11,8 @@ import notificationRoutes from './modules/notification/notification.routes';
 import ownerRoutes from './modules/owner/owner.routes';
 import publicRoutes from './modules/public/public.routes';
 import periodeRoutes from './modules/periode/periode.routes';
+import asetRoutes from './modules/aset/aset.routes';
+import stokPerlakuanRoutes from './modules/stok-perlakuan/stok-perlakuan.routes';
 import { authenticate } from './shared/middlewares/auth.middleware';
 import { requireTenantAccess } from './shared/middlewares/tenant.middleware';
 import { errorHandler, notFound } from './shared/middlewares/error.middleware';
@@ -56,6 +58,8 @@ app.use('/api/owner', ownerRoutes);
 app.use('/api/posyandu/:posyanduId/lansia', authenticate, requireTenantAccess, lansiaRoutes);
 app.use('/api/posyandu/:posyanduId/notifications', authenticate, requireTenantAccess, notificationRoutes);
 app.use('/api/posyandu/:posyanduId/periode', authenticate, requireTenantAccess, periodeRoutes);
+app.use('/api/posyandu/:posyanduId/aset', authenticate, requireTenantAccess, asetRoutes);
+app.use('/api/posyandu/:posyanduId/stok-perlakuan', authenticate, requireTenantAccess, stokPerlakuanRoutes);
 
 
 // ─────────────────────────────────────────────────────────────

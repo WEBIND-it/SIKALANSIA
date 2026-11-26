@@ -52,6 +52,33 @@ async function main() {
   });
   console.log(`✅ Akun Owner dibuat: ${kaderOwner.nama} (${kaderOwner.email}) / username: demo`);
 
+  // 3b. Buat Akun Kader Tambahan untuk pengujian tanda tangan & peran kader
+  const kader1 = await prisma.kader.create({
+    data: {
+      id: uuidv4(),
+      nama: 'Siti Rahmawati',
+      username: 'siti',
+      email: 'siti.kader@gmail.com',
+      password: hashedPassword,
+      posyanduId: posyandu.id,
+      role: 'KADER',
+      isActive: true,
+    },
+  });
+  const kader2 = await prisma.kader.create({
+    data: {
+      id: uuidv4(),
+      nama: 'Dewi Lestari',
+      username: 'dewi',
+      email: 'dewi.kader@gmail.com',
+      password: hashedPassword,
+      posyanduId: posyandu.id,
+      role: 'KADER',
+      isActive: true,
+    },
+  });
+  console.log(`✅ Akun Kader tambahan dibuat: ${kader1.nama} & ${kader2.nama}`);
+
   // 4. Buat Periode Pelayanan dari Jan 2025 s/d September 2026
   const periodesData = [
     { bulan: 1, tahun: 2025, nama: 'Periode Pelayanan Januari 2025' },
@@ -77,19 +104,17 @@ async function main() {
     { bulan: 9, tahun: 2026, nama: 'Periode Pelayanan September 2026' },
   ];
 
-  for (const p of periodesData) {
-    await prisma.periodePelayanan.create({
-      data: {
-        posyanduId: posyandu.id,
-        nama: p.nama,
-        bulan: p.bulan,
-        tahun: p.tahun,
-        tanggal: new Date(Date.UTC(p.tahun, p.bulan - 1, 10)),
-        status: (p.tahun === 2026 && p.bulan === 9) ? 'AKTIF' : 'SELESAI',
-        catatan: `Layanan rutin posyandu ${p.nama}`,
-      },
-    });
-  }
+  await prisma.periodePelayanan.createMany({
+    data: periodesData.map((p) => ({
+      posyanduId: posyandu.id,
+      nama: p.nama,
+      bulan: p.bulan,
+      tahun: p.tahun,
+      tanggal: new Date(Date.UTC(p.tahun, p.bulan - 1, 10)),
+      status: (p.tahun === 2026 && p.bulan === 9) ? 'AKTIF' : 'SELESAI',
+      catatan: `Layanan rutin posyandu ${p.nama}`,
+    })),
+  });
   console.log(`✅ ${periodesData.length} Periode Pelayanan berhasil dibuat (Januari 2025 - September 2026).`);
 
   // 5. Data 25 Lansia
@@ -144,16 +169,15 @@ async function main() {
       },
     });
 
-    // Buat pemeriksaan bulanan Jan 2025 s/d Jan 2026
-    for (const p of periodesData) {
+    const pemeriksaanBatch = periodesData.map((p) => {
       const periksaDate = new Date(Date.UTC(p.tahun, p.bulan - 1, 15));
 
       // Variasi tensi darah sesuai riwayat HT
-      let sistol = l.ht ? 140 + Math.floor(Math.random() * 25) : 115 + Math.floor(Math.random() * 15);
-      let diastol = l.ht ? 90 + Math.floor(Math.random() * 12) : 75 + Math.floor(Math.random() * 10);
+      const sistol = l.ht ? 140 + Math.floor(Math.random() * 25) : 115 + Math.floor(Math.random() * 15);
+      const diastol = l.ht ? 90 + Math.floor(Math.random() * 12) : 75 + Math.floor(Math.random() * 10);
 
       // Gula darah sesuai DM
-      let gds = l.dm ? 160 + Math.floor(Math.random() * 60) : 100 + Math.floor(Math.random() * 30);
+      const gds = l.dm ? 160 + Math.floor(Math.random() * 60) : 100 + Math.floor(Math.random() * 30);
 
       // Berat badan & tinggi badan lansia
       const bbLansia = l.jk === 'L' ? 58 + (idx % 6) : 50 + (idx % 5);
@@ -162,26 +186,166 @@ async function main() {
       const kolesterol = 170 + Math.floor(Math.random() * 45);
       const asamUrat = Number((5.0 + Math.random() * 2.5).toFixed(1));
 
-      await prisma.pemeriksaanLansia.create({
-        data: {
-          lansiaId: lansia.id,
-          tanggalPeriksa: periksaDate,
-          beratBadan: bbLansia,
-          tinggiBadan: tbLansia,
-          tekananDarahSistol: sistol,
-          tekananDarahDiastol: diastol,
-          gulaDarahSewaktu: gds,
-          lingkarPerut,
-          kolesterol,
-          asamUrat,
-          keluhan: l.ht ? 'Kadang pusing di tengkuk' : (l.dm ? 'Sering merasa haus' : 'Tidak ada keluhan'),
-          tindakan: l.ht || l.dm ? 'Edukasi diet rendah garam/gula & anjuran kontrol rutin Puskesmas' : 'Pertahankan pola hidup sehat',
-          petugas: 'Kader Demo SIKALANSIA',
-        },
-      });
-    }
+      return {
+        lansiaId: lansia.id,
+        tanggalPeriksa: periksaDate,
+        beratBadan: bbLansia,
+        tinggiBadan: tbLansia,
+        tekananDarahSistol: sistol,
+        tekananDarahDiastol: diastol,
+        gulaDarahSewaktu: gds,
+        lingkarPerut,
+        kolesterol,
+        asamUrat,
+        keluhan: l.ht ? 'Kadang pusing di tengkuk' : (l.dm ? 'Sering merasa haus' : 'Tidak ada keluhan'),
+        tindakan: l.ht || l.dm ? 'Edukasi diet rendah garam/gula & anjuran kontrol rutin Puskesmas' : 'Pertahankan pola hidup sehat',
+        petugas: 'Kader Demo SIKALANSIA',
+      };
+    });
+
+    await prisma.pemeriksaanLansia.createMany({
+      data: pemeriksaanBatch,
+    });
   }
   console.log('✅ 25 Lansia beserta riwayat pemeriksaan bulanan berhasil dibuat.');
+
+  // 6. Monitoring Aset Posyandu
+  console.log('📦 Membuat data monitoring aset posyandu...');
+  const asetsData = [
+    {
+      nama: 'Timbangan Badan Digital Camry',
+      foto: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=400&auto=format&fit=crop&q=60',
+      stok: 2,
+      kondisi: 'BAIK' as const,
+      tanggalMasukBaru: new Date('2026-01-10'),
+      tanggalMasukSebelumnya: new Date('2024-06-15'),
+      catatan: 'Ditempatkan di Meja 2 (Penimbangan). Kondisi baterai baru diganti.',
+    },
+    {
+      nama: 'Tensimeter Digital Omron HEM-7120',
+      foto: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400&auto=format&fit=crop&q=60',
+      stok: 2,
+      kondisi: 'BAIK' as const,
+      tanggalMasukBaru: new Date('2026-02-01'),
+      tanggalMasukSebelumnya: new Date('2023-11-20'),
+      catatan: 'Tensimeter utama Meja 3 (Pemeriksaan Tekanan Darah).',
+    },
+    {
+      nama: 'Tensimeter Manual Aneroid ABN',
+      foto: 'https://images.unsplash.com/photo-1584515933487-779824d29309?w=400&auto=format&fit=crop&q=60',
+      stok: 1,
+      kondisi: 'RUSAK_RINGAN' as const,
+      tanggalMasukBaru: new Date('2025-05-12'),
+      tanggalMasukSebelumnya: new Date('2022-08-10'),
+      catatan: 'Pompa manset agak bocor halus, perlu servis balon pemompa.',
+    },
+    {
+      nama: 'Meja Layanan Posyandu Lipat',
+      foto: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=400&auto=format&fit=crop&q=60',
+      stok: 4,
+      kondisi: 'BAIK' as const,
+      tanggalMasukBaru: new Date('2025-01-15'),
+      tanggalMasukSebelumnya: new Date('2021-03-10'),
+      catatan: '4 Meja utama sistem 5 langkah pelayanan posyandu lansia.',
+    },
+    {
+      nama: 'Pita Pengukur Lingkar Perut (Metline)',
+      foto: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400&auto=format&fit=crop&q=60',
+      stok: 3,
+      kondisi: 'BAIK' as const,
+      tanggalMasukBaru: new Date('2026-01-10'),
+      tanggalMasukSebelumnya: new Date('2024-01-10'),
+      catatan: 'Pita ukur fleksibel standar Kemenkes.',
+    },
+  ];
+
+  for (const aset of asetsData) {
+    await (prisma as any).aset.create({
+      data: {
+        posyanduId: posyandu.id,
+        ...aset,
+      },
+    });
+  }
+  console.log(`✅ ${asetsData.length} Aset posyandu berhasil dibuat.`);
+
+  // 7. Monitoring Stok Pemberian Perlakuan
+  console.log('💊 Membuat data stok perlakuan (Vitamin & Alat Medis)...');
+  const stokData = [
+    {
+      namaBarang: 'Vitamin B Kompleks (B1, B6, B12)',
+      kategori: 'Vitamin',
+      stokTersedia: 200,
+      terpakai: 75,
+      sisa: 125,
+      satuan: 'tablet',
+      catatan: 'Untuk suplemen syaraf & stamina lansia.',
+    },
+    {
+      namaBarang: 'Vitamin C 500mg',
+      kategori: 'Vitamin',
+      stokTersedia: 250,
+      terpakai: 110,
+      sisa: 140,
+      satuan: 'tablet',
+      catatan: 'Diberikan rutin saat kunjungan musim pancaroba.',
+    },
+    {
+      namaBarang: 'Stick Tes Gula Darah (GDS) EasyTouch',
+      kategori: 'Stick Gula Darah',
+      stokTersedia: 100,
+      terpakai: 35,
+      sisa: 65,
+      satuan: 'strip',
+      catatan: 'Expired date: Desember 2027.',
+    },
+    {
+      namaBarang: 'Stick Tes Kolesterol EasyTouch',
+      kategori: 'Kolesterol',
+      stokTersedia: 60,
+      terpakai: 22,
+      sisa: 38,
+      satuan: 'strip',
+      catatan: 'Pemeriksaan khusus bagi lansia berisiko.',
+    },
+    {
+      namaBarang: 'Stick Tes Asam Urat EasyTouch',
+      kategori: 'Asam Urat',
+      stokTersedia: 60,
+      terpakai: 18,
+      sisa: 42,
+      satuan: 'strip',
+      catatan: 'Expired date: Oktober 2027.',
+    },
+    {
+      namaBarang: 'Jarum Lanset Steril 28G',
+      kategori: 'Alat Perlakuan',
+      stokTersedia: 300,
+      terpakai: 75,
+      sisa: 225,
+      satuan: 'pcs',
+      catatan: 'Jarum sekali pakai untuk pengambilan sampel darah kapiler.',
+    },
+    {
+      namaBarang: 'Alcohol Swabs 70%',
+      kategori: 'Alat Perlakuan',
+      stokTersedia: 300,
+      terpakai: 75,
+      sisa: 225,
+      satuan: 'pcs',
+      catatan: 'Kapas alkohol antiseptik pembersih ujung jari.',
+    },
+  ];
+
+  for (const s of stokData) {
+    await (prisma as any).stokPerlakuan.create({
+      data: {
+        posyanduId: posyandu.id,
+        ...s,
+      },
+    });
+  }
+  console.log(`✅ ${stokData.length} Item stok perlakuan berhasil dibuat.`);
 
   console.log('🎉 Selesai! Data demo siap digunakan.');
 }

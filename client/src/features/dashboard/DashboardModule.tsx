@@ -37,17 +37,41 @@ interface DashboardModuleProps {
 export default function DashboardModule({ searchQuery, onNavigate, posyanduId, activePeriode }: DashboardModuleProps) {
   const { user } = useAuth();
 
+  // ── Periode Filter State ────────────────────────────────────
+  const now = new Date();
+  const [selectedBulan, setSelectedBulan] = useState<number>(() => {
+    return activePeriode?.bulan ?? (now.getMonth() + 1);
+  });
+  const [selectedTahun, setSelectedTahun] = useState<number>(() => {
+    return activePeriode?.tahun ?? now.getFullYear();
+  });
+
+  // Sync saat activePeriode berubah
+  useEffect(() => {
+    if (activePeriode?.bulan && activePeriode?.tahun) {
+      setSelectedBulan(activePeriode.bulan);
+      setSelectedTahun(activePeriode.tahun);
+    }
+  }, [activePeriode]);
+
+  const namaBulanList = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  const namaBulanAktif = namaBulanList[selectedBulan - 1] || "";
+  const periodeLabelAktif = `${namaBulanAktif} ${selectedTahun}`;
+
   // ── API state ──────────────────────────────────────────────
   const [summary, setSummary] = useState<DashboardSummary | null>(() => {
     if (typeof window !== "undefined" && posyanduId) {
-      const cached = clientDataCache.get<DashboardSummary>(`dash_summary_${posyanduId}`);
+      const cached = clientDataCache.get<DashboardSummary>(`dash_summary_${posyanduId}_${selectedBulan}_${selectedTahun}`);
       if (cached) return cached;
     }
     return null;
   });
   const [isSummaryLoading, setIsSummaryLoading] = useState(() => {
     if (typeof window !== "undefined" && posyanduId) {
-      const cached = clientDataCache.get<DashboardSummary>(`dash_summary_${posyanduId}`);
+      const cached = clientDataCache.get<DashboardSummary>(`dash_summary_${posyanduId}_${selectedBulan}_${selectedTahun}`);
       if (cached) return false;
     }
     return true;
@@ -65,7 +89,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
   const fetchAktivitas = () => {
     setIsAktivitasLoading(true);
     dashboardApi
-      .getAktivitasKunjungan(posyanduId)
+      .getAktivitasKunjungan(posyanduId, { bulan: selectedBulan, tahun: selectedTahun })
       .then((res) => {
         if (res.success && res.data) {
           setAktivitasData(res.data);
@@ -77,7 +101,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
 
   useEffect(() => {
     fetchAktivitas();
-  }, [posyanduId, activePeriode]);
+  }, [posyanduId, selectedBulan, selectedTahun]);
 
   // ── Modals State ──
   const [showDetailAktivitas, setShowDetailAktivitas] = useState(false);
@@ -110,7 +134,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
   };
 
   const fetchSummary = () => {
-    const dashCacheKey = `dash_summary_${posyanduId}`;
+    const dashCacheKey = `dash_summary_${posyanduId}_${selectedBulan}_${selectedTahun}`;
     const cached = clientDataCache.get<DashboardSummary>(dashCacheKey);
     if (cached) {
       setSummary(cached);
@@ -120,7 +144,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
     }
 
     dashboardApi
-      .getSummary(posyanduId)
+      .getSummary(posyanduId, { bulan: selectedBulan, tahun: selectedTahun })
       .then((res) => {
         if (res.success) {
           setSummary(res.data);
@@ -133,12 +157,12 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
 
   useEffect(() => {
     fetchSummary();
-  }, [posyanduId, activePeriode]);
+  }, [posyanduId, selectedBulan, selectedTahun]);
 
   // Fetch Lansia Patients List
   useEffect(() => {
-    const targetMonth = activePeriode ? activePeriode.bulan : (new Date().getMonth() + 1);
-    const targetYear = activePeriode ? activePeriode.tahun : new Date().getFullYear();
+    const targetMonth = selectedBulan;
+    const targetYear = selectedTahun;
 
     lansiaApi.getAll(posyanduId)
       .then((lansiaRes) => {
@@ -162,13 +186,13 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
         setDbPasiens(lansias);
       })
       .catch(console.error);
-  }, [posyanduId, activePeriode]);
+  }, [posyanduId, selectedBulan, selectedTahun]);
 
   // Fetch Distribusi Kehadiran RT/RW
   useEffect(() => {
     setIsDistribusiLoading(true);
     dashboardApi
-      .getDistribusiKehadiran(posyanduId)
+      .getDistribusiKehadiran(posyanduId, { bulan: selectedBulan, tahun: selectedTahun })
       .then((res) => {
         if (res.success && res.data) {
           setDistribusiKehadiran(res.data);
@@ -176,13 +200,13 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
       })
       .catch(console.error)
       .finally(() => setIsDistribusiLoading(false));
-  }, [posyanduId]);
+  }, [posyanduId, selectedBulan, selectedTahun]);
 
   // ── Riwayat Pelayanan Periode Aktif (untuk KPI Perlu Tindak Lanjut & Follow-Up) ──
   const [riwayatLogs, setRiwayatLogs] = useState<ItemRiwayat[]>(() => {
     if (typeof window !== "undefined" && posyanduId) {
-      const targetM = activePeriode ? String(activePeriode.bulan).padStart(2, "0") : String(new Date().getMonth() + 1).padStart(2, "0");
-      const targetY = activePeriode ? String(activePeriode.tahun) : String(new Date().getFullYear());
+      const targetM = String(selectedBulan).padStart(2, "0");
+      const targetY = String(selectedTahun);
       const cacheKey = `laporan_logs_${posyanduId}_${targetM}_${targetY}`;
       const cached = clientDataCache.get<ItemRiwayat[]>(cacheKey);
       if (cached) return cached;
@@ -191,8 +215,8 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
   });
   const [isRiwayatLoading, setIsRiwayatLoading] = useState<boolean>(() => {
     if (typeof window !== "undefined" && posyanduId) {
-      const targetM = activePeriode ? String(activePeriode.bulan).padStart(2, "0") : String(new Date().getMonth() + 1).padStart(2, "0");
-      const targetY = activePeriode ? String(activePeriode.tahun) : String(new Date().getFullYear());
+      const targetM = String(selectedBulan).padStart(2, "0");
+      const targetY = String(selectedTahun);
       const cacheKey = `laporan_logs_${posyanduId}_${targetM}_${targetY}`;
       const cached = clientDataCache.get<ItemRiwayat[]>(cacheKey);
       if (cached && cached.length > 0) return false;
@@ -202,8 +226,8 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
 
   useEffect(() => {
     if (!posyanduId) return;
-    const targetM = activePeriode ? String(activePeriode.bulan).padStart(2, "0") : String(new Date().getMonth() + 1).padStart(2, "0");
-    const targetY = activePeriode ? String(activePeriode.tahun) : String(new Date().getFullYear());
+    const targetM = String(selectedBulan).padStart(2, "0");
+    const targetY = String(selectedTahun);
     const cacheKey = `laporan_logs_${posyanduId}_${targetM}_${targetY}`;
     const cached = clientDataCache.get<ItemRiwayat[]>(cacheKey);
 
@@ -224,7 +248,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
       })
       .catch(console.error)
       .finally(() => setIsRiwayatLoading(false));
-  }, [posyanduId, activePeriode]);
+  }, [posyanduId, selectedBulan, selectedTahun]);
 
   const { perluFollowUpLansia } = useMemo(() => {
     const lansiaLogs = riwayatLogs.filter((l) => l.tipe === "Lansia");
@@ -528,12 +552,58 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-hairline pb-4 sm:pb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-hairline pb-4 sm:pb-6">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h2>
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+              Periode: {periodeLabelAktif}
+            </span>
+          </div>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-normal">
-            Pemantauan status kesehatan lansia dan skrining penyakit tidak menular Posyandu Lansia.
+            Pemantauan status kesehatan lansia dan skrining penyakit tidak menular Posyandu Lansia untuk bulan <strong>{namaBulanAktif} {selectedTahun}</strong>.
           </p>
+        </div>
+
+        {/* Periode / Month Selector */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-2xs">
+            <select
+              value={selectedBulan}
+              onChange={(e) => setSelectedBulan(Number(e.target.value))}
+              className="px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-transparent focus:outline-none cursor-pointer"
+            >
+              {namaBulanList.map((m, idx) => (
+                <option key={idx + 1} value={idx + 1} className="text-slate-900 dark:text-slate-100 dark:bg-slate-900">
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedTahun}
+              onChange={(e) => setSelectedTahun(Number(e.target.value))}
+              className="px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 bg-transparent border-l border-slate-200 dark:border-slate-800 focus:outline-none cursor-pointer"
+            >
+              {[2024, 2025, 2026, 2027, 2028].map((y) => (
+                <option key={y} value={y} className="text-slate-900 dark:text-slate-100 dark:bg-slate-900">
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              const curDate = new Date();
+              setSelectedBulan(curDate.getMonth() + 1);
+              setSelectedTahun(curDate.getFullYear());
+            }}
+            className="px-3 py-2 text-xs font-bold rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 text-slate-700 dark:text-slate-300 transition-colors shadow-2xs cursor-pointer"
+            title="Kembali ke bulan ini"
+          >
+            Bulan Ini
+          </button>
         </div>
       </div>
 

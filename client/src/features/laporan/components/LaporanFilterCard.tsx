@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { RotateCcw, Loader2, Eye, Download } from "lucide-react";
+import React, { useState } from "react";
+import { RotateCcw, Loader2, Eye, Download, ChevronDown, ChevronUp, PenTool } from "lucide-react";
 
 export interface LaporanFilterCardProps {
   filterCategory?: "Lansia";
@@ -26,6 +26,14 @@ export interface LaporanFilterCardProps {
   onExportExcel: () => void;
   isExportingExcel: boolean;
   isExportingPdf?: boolean;
+  tanggalTtd?: string;
+  setTanggalTtd?: (v: string) => void;
+  namaKades?: string;
+  setNamaKades?: (v: string) => void;
+  namaBidan?: string;
+  setNamaBidan?: (v: string) => void;
+  namaKaur?: string;
+  setNamaKaur?: (v: string) => void;
 }
 
 export default function LaporanFilterCard({
@@ -49,7 +57,16 @@ export default function LaporanFilterCard({
   onExportExcel,
   isExportingExcel,
   isExportingPdf = false,
+  tanggalTtd = "",
+  setTanggalTtd,
+  namaKades = "",
+  setNamaKades,
+  namaBidan = "",
+  setNamaBidan,
+  namaKaur = "",
+  setNamaKaur,
 }: LaporanFilterCardProps) {
+  const [showTtdConfig, setShowTtdConfig] = useState(false);
   const hasPosyanduFilter = Array.isArray(posyandus) && posyandus.length > 0 && setSelectedPosyandu;
 
   return (
@@ -178,6 +195,20 @@ export default function LaporanFilterCard({
             Semua Periode
           </button>
 
+          {/* Toggle Konfigurasi Tanda Tangan */}
+          {setTanggalTtd && (
+            <button
+              type="button"
+              onClick={() => setShowTtdConfig((prev) => !prev)}
+              className="px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-bold rounded-lg border border-amber-200/80 transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+              title="Atur tanggal tanda tangan & nama pejabat laporan"
+            >
+              <PenTool className="w-3.5 h-3.5" />
+              <span>Format Tanda Tangan</span>
+              {showTtdConfig ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
           {isLoading && (
             <span className="text-xs text-teal-600 font-semibold flex items-center gap-1.5 animate-pulse">
               <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memperbarui data...
@@ -228,6 +259,80 @@ export default function LaporanFilterCard({
           </button>
         </div>
       </div>
+
+      {/* Bagian Konfigurasi Tanda Tangan & Pejabat Desa */}
+      {showTtdConfig && setTanggalTtd && (
+        <div className="mt-3 p-4 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between pb-2 border-b border-amber-200/60">
+            <div>
+              <h4 className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                <PenTool className="w-3.5 h-3.5 text-amber-700" />
+                Pengaturan Tanda Tangan &amp; Pejabat Pengesah Dokumen
+              </h4>
+              <p className="text-[11px] text-amber-700 mt-0.5">
+                Format: Sisi Kiri = Semua kader posyandu terdaftar • Sisi Kanan = Kepala Desa, Bidan Desa, Kaur Kesra.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowTtdConfig(false)}
+              className="text-xs font-bold text-amber-800 hover:underline cursor-pointer"
+            >
+              Tutup
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-800 mb-1">
+                Tanggal Tanda Tangan
+              </label>
+              <input
+                type="date"
+                value={tanggalTtd}
+                onChange={(e) => setTanggalTtd(e.target.value)}
+                className="w-full px-2.5 py-1.5 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-800 mb-1">
+                Nama Kepala Desa
+              </label>
+              <input
+                type="text"
+                value={namaKades}
+                onChange={(e) => setNamaKades && setNamaKades(e.target.value)}
+                placeholder="Contoh: H. Ahmad Supriyadi"
+                className="w-full px-2.5 py-1.5 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-800 mb-1">
+                Nama Bidan Desa
+              </label>
+              <input
+                type="text"
+                value={namaBidan}
+                onChange={(e) => setNamaBidan && setNamaBidan(e.target.value)}
+                placeholder="Contoh: Bd. Siti Nurhaliza, S.Tr.Keb"
+                className="w-full px-2.5 py-1.5 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-800 mb-1">
+                Nama Kaur Kesra
+              </label>
+              <input
+                type="text"
+                value={namaKaur}
+                onChange={(e) => setNamaKaur && setNamaKaur(e.target.value)}
+                placeholder="Contoh: Bambang Wijaya"
+                className="w-full px-2.5 py-1.5 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

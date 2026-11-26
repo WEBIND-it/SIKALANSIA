@@ -29,6 +29,8 @@ model Posyandu {
   notifications Notification[]
   auditLogs     AuditLog[]
   periodePelayanans PeriodePelayanan[]
+  asets         Aset[]
+  stokPerlakuans StokPerlakuan[]
 
   @@map("posyandu")
 }
@@ -188,3 +190,52 @@ enum StatusPeriode {
   AKTIF
   SELESAI
 }
+
+// ─────────────────────────────────────────────────────────────
+// MONITORING ASET (Timbangan, Tensimeter, Meja, dll.)
+// ─────────────────────────────────────────────────────────────
+model Aset {
+  id                     String      @id @default(uuid())
+  posyanduId             String      @map("posyandu_id")
+  nama                   String
+  foto                   String?     @db.Text
+  stok                   Int         @default(1)
+  kondisi                KondisiAset @default(BAIK)
+  tanggalMasukBaru       DateTime?   @map("tanggal_masuk_baru") @db.Date
+  tanggalMasukSebelumnya DateTime?   @map("tanggal_masuk_sebelumnya") @db.Date
+  catatan                String?     @db.Text
+  createdAt              DateTime    @default(now()) @map("created_at")
+  updatedAt              DateTime    @updatedAt @map("updated_at")
+
+  posyandu Posyandu @relation(fields: [posyanduId], references: [id], onDelete: Cascade)
+
+  @@map("aset")
+}
+
+enum KondisiAset {
+  BAIK
+  RUSAK_RINGAN
+  RUSAK_BERAT
+}
+
+// ─────────────────────────────────────────────────────────────
+// MONITORING STOK PEMBERIAN PERLAKUAN (Vitamin, Stick GDS, dll.)
+// ─────────────────────────────────────────────────────────────
+model StokPerlakuan {
+  id           String   @id @default(uuid())
+  posyanduId   String   @map("posyandu_id")
+  namaBarang   String   @map("nama_barang")
+  stokTersedia Int      @default(0) @map("stok_tersedia")
+  terpakai     Int      @default(0)
+  sisa         Int      @default(0)
+  satuan       String   @default("pcs")
+  kategori     String?  // Vitamin, Stick Gula Darah, Kolesterol, Asam Urat, dll.
+  catatan      String?  @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  posyandu Posyandu @relation(fields: [posyanduId], references: [id], onDelete: Cascade)
+
+  @@map("stok_perlakuan")
+}
+

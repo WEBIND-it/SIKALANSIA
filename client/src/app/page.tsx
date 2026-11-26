@@ -34,7 +34,7 @@ import {
   Trash,
   Globe,
 } from "@phosphor-icons/react";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Package, HeartPulse } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
 import { notificationApi, authApi, lansiaApi, periodeApi, AppNotification, PeriodePelayanan } from "../lib/api";
@@ -47,6 +47,8 @@ import PelayananModule from "../features/pelayanan/PelayananModule";
 import LansiaModule from "../features/lansia/LansiaModule";
 import RiwayatModule from "../features/riwayat/RiwayatModule";
 import LaporanModule from "../features/laporan/LaporanModule";
+import AsetModule from "../features/aset/AsetModule";
+import StokPerlakuanModule from "../features/stok/StokPerlakuanModule";
 import PengaturanModule from "../features/pengaturan/PengaturanModule";
 import ManajemenAkunModule from "../features/pengaturan/ManajemenAkunModule";
 import BantuanModule from "../features/bantuan/BantuanModule";
@@ -454,6 +456,15 @@ export default function Home() {
     };
   }, [showNotification, showProfileMenu]);
 
+  const isKader = user?.role === "KADER";
+
+  // Enforce role: Kader hanya bisa input data pengunjung (Pelayanan)
+  useEffect(() => {
+    if (isKader && activeMenu !== "Pelayanan") {
+      setActiveMenu("Pelayanan");
+    }
+  }, [isKader, activeMenu]);
+
   // ── Loading spinner ──────────────────────────────────────
   if (isLoading) {
     return (
@@ -524,38 +535,58 @@ export default function Home() {
   }
 
   // Categorized Navigation Sections
-  const navSections = [
-    {
-      category: "Utama",
-      items: [
-        { name: "Overview", icon: SquaresFour },
-        { name: "Pelayanan", icon: ClipboardText },
-      ],
-    },
-    {
-      category: "Data Sasaran",
-      items: [
-        { name: "Lansia", icon: LansiaIcon },
-      ],
-    },
-    {
-      category: "Laporan & Riwayat",
-      items: [
-        { name: "Riwayat", icon: ClockCounterClockwise },
-        { name: "Laporan", icon: FileText },
-      ],
-    },
-    {
-      category: "Sistem & Akun",
-      items: [
-        { name: "Manajemen Akun", icon: Users },
-        { name: "Pengaturan", icon: Gear },
-      ],
-    },
-  ];
+  const navSections = isKader
+    ? [
+        {
+          category: "Pelayanan",
+          items: [
+            { name: "Pelayanan", icon: ClipboardText },
+          ],
+        },
+      ]
+    : [
+        {
+          category: "Utama",
+          items: [
+            { name: "Overview", icon: SquaresFour },
+            { name: "Pelayanan", icon: ClipboardText },
+          ],
+        },
+        {
+          category: "Data Sasaran",
+          items: [
+            { name: "Lansia", icon: LansiaIcon },
+          ],
+        },
+        {
+          category: "Monitoring & Logistik",
+          items: [
+            { name: "Aset", icon: Package as any },
+            { name: "Stok Perlakuan", icon: HeartPulse as any },
+          ],
+        },
+        {
+          category: "Laporan & Riwayat",
+          items: [
+            { name: "Riwayat", icon: ClockCounterClockwise },
+            { name: "Laporan", icon: FileText },
+          ],
+        },
+        {
+          category: "Sistem & Akun",
+          items: [
+            { name: "Manajemen Akun", icon: Users },
+            { name: "Pengaturan", icon: Gear },
+          ],
+        },
+      ];
 
   // ── Conditional Rendering of Views ──────────────────────
   const handleDashboardNavigate = (menu: string, patientId?: string) => {
+    if (isKader) {
+      setActiveMenu("Pelayanan");
+      return;
+    }
     const target = menu.toLowerCase().trim();
     if (target === "lansia") {
       if (patientId) {
@@ -568,6 +599,10 @@ export default function Home() {
       setActiveMenu("Lansia");
     } else if (target === "pelayanan") {
       setActiveMenu("Pelayanan");
+    } else if (target === "aset") {
+      setActiveMenu("Aset");
+    } else if (target === "stok perlakuan" || target === "stok") {
+      setActiveMenu("Stok Perlakuan");
     } else if (target === "laporan") {
       setActiveMenu("Laporan");
     } else if (target === "riwayat") {
@@ -604,6 +639,17 @@ export default function Home() {
   };
 
   const renderActiveView = () => {
+    if (isKader) {
+      return (
+        <PelayananModule
+          posyanduId={posyanduId}
+          activePeriode={activePeriode}
+          onOpenPeriodeModal={() => setIsPeriodeModalOpen(true)}
+          onNavigate={handleDashboardNavigate}
+        />
+      );
+    }
+
     switch (activeMenu) {
       case "Overview":
         return (
@@ -635,6 +681,10 @@ export default function Home() {
             backLabel={getBackLabel("Kembali ke Daftar Lansia")}
           />
         );
+      case "Aset":
+        return <AsetModule posyanduId={posyanduId} />;
+      case "Stok Perlakuan":
+        return <StokPerlakuanModule posyanduId={posyanduId} />;
       case "Riwayat":
         return <RiwayatModule posyanduId={posyanduId} activePeriode={activePeriode} onNavigate={handleDashboardNavigate} />;
       case "Laporan":
@@ -665,6 +715,10 @@ export default function Home() {
     .toUpperCase();
 
   const handleMenuSelect = (menuName: string) => {
+    if (isKader && menuName !== "Pelayanan") {
+      setActiveMenu("Pelayanan");
+      return;
+    }
     setNavigationOrigin(null);
     if (menuName === "Lansia") {
       setSelectedLansiaId(undefined);
@@ -1196,10 +1250,14 @@ export default function Home() {
                   <Calendar className={`w-4 h-4 shrink-0 ${isOutdated ? "text-amber-600 dark:text-amber-400" : "text-teal-700 dark:text-teal-400"}`} weight="bold" />
                   <div className="text-left hidden sm:block">
                     <span className="block text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold leading-none">
-                      Periode
+                      Periode Bulan
                     </span>
-                    <span className="block text-xs font-bold text-slate-900 dark:text-white leading-tight mt-0.5 truncate max-w-[130px]">
-                      {activePeriode ? activePeriode.nama : "Pilih Periode"}
+                    <span className="block text-xs font-bold text-slate-900 dark:text-white leading-tight mt-0.5 truncate max-w-[140px]">
+                      {activePeriode
+                        ? new Intl.DateTimeFormat("id-ID", { month: "long", year: "numeric" }).format(
+                            new Date(activePeriode.tahun, activePeriode.bulan - 1, 1)
+                          )
+                        : "Pilih Periode"}
                     </span>
                   </div>
                   {isOutdated && (
@@ -1315,7 +1373,7 @@ export default function Home() {
                     <CaretDown className="w-3.5 h-3.5 text-saas-muted group-hover:text-saas-dark transition-transform duration-200" weight="bold" />
                   </div>
                   <p className="text-[10px] sm:text-[11px] text-saas-muted font-semibold mt-0.5">
-                    {user.role === "OWNER" ? "Pengelola" : "Kader"} · {user.posyandu.nama}
+                    {user.role === "OWNER" ? "Operator" : "Kader"} · {user.posyandu.nama}
                   </p>
                 </div>
               </button>
@@ -1342,7 +1400,7 @@ export default function Home() {
                       </button>
                     </div>
                     <div className="mt-2 inline-block px-2 py-0.5 rounded-md text-[9px] font-bold bg-teal-50 text-saas-primary border border-teal-200/50">
-                      {user.role === "OWNER" ? "Pengelola (Owner)" : "Kader Posyandu"}
+                      {user.role === "OWNER" ? "Operator Sistem" : "Kader Posyandu"}
                     </div>
                   </div>
 
@@ -1358,13 +1416,15 @@ export default function Home() {
                     Edit Profil Saya
                   </button>
 
-                  <button
-                    onClick={() => handleMenuSelect("Pengaturan")}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-saas-dark hover:bg-gray-50 rounded-lg transition-colors text-left"
-                  >
-                    <Gear className="w-4 h-4 text-saas-muted" weight="bold" />
-                    Pengaturan Sistem
-                  </button>
+                  {!isKader && (
+                    <button
+                      onClick={() => handleMenuSelect("Pengaturan")}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-saas-dark hover:bg-gray-50 rounded-lg transition-colors text-left"
+                    >
+                      <Gear className="w-4 h-4 text-saas-muted" weight="bold" />
+                      Pengaturan Sistem
+                    </button>
+                  )}
 
                   {user.role === "OWNER" && (
                     <button
