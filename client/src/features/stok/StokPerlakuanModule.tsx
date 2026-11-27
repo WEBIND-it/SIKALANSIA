@@ -53,6 +53,10 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StokPerlakuan | null>(null);
   const [usingItem, setUsingItem] = useState<StokPerlakuan | null>(null);
+  const [updatingStockItem, setUpdatingStockItem] = useState<StokPerlakuan | null>(null);
+  const [stockUpdateMode, setStockUpdateMode] = useState<'add' | 'set'>('add');
+  const [stockUpdateAmount, setStockUpdateAmount] = useState<number>(10);
+  const [stockUpdateNotes, setStockUpdateNotes] = useState<string>('');
   const [detailItem, setDetailItem] = useState<StokPerlakuan | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,6 +189,59 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
     setUsingItem(item);
     setUseAmount(1);
     setUseNotes('');
+  };
+
+  const openUpdateStockModal = (item: StokPerlakuan) => {
+    setUpdatingStockItem(item);
+    setStockUpdateMode('add');
+    setStockUpdateAmount(10);
+    setStockUpdateNotes('');
+  };
+
+  const handleQuickUpdateStock = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!updatingStockItem) return;
+
+    const newStokTersedia =
+      stockUpdateMode === 'add'
+        ? updatingStockItem.stokTersedia + Math.max(0, Number(stockUpdateAmount))
+        : Math.max(updatingStockItem.terpakai, Number(stockUpdateAmount));
+
+    if (stockUpdateMode === 'add' && Number(stockUpdateAmount) <= 0) {
+      toast.error('Jumlah penambahan stok minimal 1');
+      return;
+    }
+
+    const delta = newStokTersedia - updatingStockItem.stokTersedia;
+    const newSisa = Math.max(0, newStokTersedia - updatingStockItem.terpakai);
+
+    setIsSubmitting(true);
+    try {
+      const res = await stokPerlakuanApi.update(posyanduId, updatingStockItem.id, {
+        stokTersedia: newStokTersedia,
+      });
+      if (res.success) {
+        appendStokHistory({
+          itemId: updatingStockItem.id,
+          tanggal: new Date().toISOString(),
+          aktivitas: delta > 0 ? 'Penambahan Stok' : 'Penyesuaian',
+          perubahan: delta,
+          sisaSetelah: newSisa,
+          keterangan:
+            stockUpdateNotes.trim() ||
+            (stockUpdateMode === 'add'
+              ? `Tambah stok +${delta} ${updatingStockItem.satuan}`
+              : `Atur ulang total stok menjadi ${newStokTersedia} ${updatingStockItem.satuan}`),
+        });
+        toast.success(`Stok ${updatingStockItem.namaBarang} berhasil diperbarui`);
+        setUpdatingStockItem(null);
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memperbarui stok');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -507,82 +564,94 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                         {item.catatan || '-'}
                       </td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <div className="relative inline-block text-left">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          {isOperator && (
+                            <button
+                              type="button"
+                              onClick={() => openUpdateStockModal(item)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-saas-primary hover:bg-saas-primary-active text-white text-[11px] font-bold shadow-2xs transition-colors cursor-pointer"
+                              title="Tambah atau perbarui stok"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Update Stok</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId((prev) => (prev === item.id ? null : item.id));
-                            }}
-                            className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
-                            title="Menu Aksi"
-                            aria-label="Menu Aksi"
+                            onClick={() => openUseModal(item)}
+                            disabled={item.sisa <= 0}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            title="Catat pemakaian stok"
                           >
-                            <MoreVertical className="w-4 h-4" />
+                            <MinusCircle className="w-3.5 h-3.5 text-amber-600" />
+                            <span>Pakai</span>
                           </button>
 
-                          {openMenuId === item.id && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className={`absolute right-0 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-left ${
-                                idx >= filteredItems.length - 2 && filteredItems.length > 2
-                                  ? 'bottom-full mb-1'
-                                  : 'top-full mt-1'
-                              }`}
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId((prev) => (prev === item.id ? null : item.id));
+                              }}
+                              className="p-1.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                              title="Menu Lainnya"
+                              aria-label="Menu Lainnya"
                             >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  setDetailItem(item);
-                                }}
-                                className="w-full px-3 py-2 text-xs font-medium text-teal-700 hover:bg-teal-50 flex items-center gap-2 transition-colors cursor-pointer"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-teal-600" />
-                                <span>Detail &amp; Riwayat</span>
-                              </button>
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuId(null);
-                                  openUseModal(item);
-                                }}
-                                disabled={item.sisa <= 0}
-                                className="w-full px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-50 flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                            {openMenuId === item.id && (
+                              <div
+                                onClick={(e) => e.stopPropagation()}
+                                className={`absolute right-0 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-30 py-1 text-left ${
+                                  idx >= filteredItems.length - 2 && filteredItems.length > 2
+                                    ? 'bottom-full mb-1'
+                                    : 'top-full mt-1'
+                                }`}
                               >
-                                <MinusCircle className="w-3.5 h-3.5 text-amber-600" />
-                                <span>Catat Pemakaian</span>
-                              </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenMenuId(null);
+                                    setDetailItem(item);
+                                  }}
+                                  className="w-full px-3 py-2 text-xs font-medium text-teal-700 hover:bg-teal-50 flex items-center gap-2 transition-colors cursor-pointer"
+                                >
+                                  <Eye className="w-3.5 h-3.5 text-teal-600" />
+                                  <span>Lihat Detail</span>
+                                </button>
 
-                              {isOperator && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      openEditModal(item);
-                                    }}
-                                    className="w-full px-3 py-2 text-xs font-medium text-gray-700 hover:bg-teal-50 hover:text-teal-700 flex items-center gap-2 transition-colors cursor-pointer"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                    <span>Edit Data</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setOpenMenuId(null);
-                                      setDeleteConfirmId(item.id);
-                                    }}
-                                    className="w-full px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Hapus Barang</span>
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                                {isOperator && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuId(null);
+                                        openEditModal(item);
+                                      }}
+                                      className="w-full px-3 py-2 text-xs font-medium text-gray-700 hover:bg-teal-50 hover:text-teal-700 flex items-center gap-2 transition-colors cursor-pointer"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5" />
+                                      <span>Edit Data</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setOpenMenuId(null);
+                                        setDeleteConfirmId(item.id);
+                                      }}
+                                      className="w-full px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 flex items-center gap-2 transition-colors cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <span>Hapus Barang</span>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                     </tr>
@@ -593,6 +662,120 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           </table>
         </div>
       </div>
+
+      {/* Modal Update Stok Cepat & Simpel */}
+      {updatingStockItem && (
+        <Modal
+          isOpen={true}
+          onClose={() => setUpdatingStockItem(null)}
+          title={`Update Stok: ${updatingStockItem.namaBarang}`}
+        >
+          <form onSubmit={handleQuickUpdateStock} className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-teal-50/70 rounded-xl border border-teal-200/70 text-xs">
+              <span className="text-gray-700">
+                Sisa saat ini: <strong className="text-gray-900">{updatingStockItem.sisa} {updatingStockItem.satuan}</strong>
+              </span>
+              <span className="text-teal-800 font-bold">
+                Baru:{' '}
+                {stockUpdateMode === 'add'
+                  ? updatingStockItem.sisa + Math.max(0, Number(stockUpdateAmount))
+                  : Math.max(0, Number(stockUpdateAmount) - updatingStockItem.terpakai)}{' '}
+                {updatingStockItem.satuan}
+              </span>
+            </div>
+
+            {/* Mode Switch */}
+            <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setStockUpdateMode('add');
+                  setStockUpdateAmount(10);
+                }}
+                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  stockUpdateMode === 'add' ? 'bg-white text-saas-primary shadow-2xs' : 'text-gray-600'
+                }`}
+              >
+                + Tambah Stok
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setStockUpdateMode('set');
+                  setStockUpdateAmount(updatingStockItem.stokTersedia);
+                }}
+                className={`py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  stockUpdateMode === 'set' ? 'bg-white text-saas-primary shadow-2xs' : 'text-gray-600'
+                }`}
+              >
+                Atur Total Stok
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                {stockUpdateMode === 'add'
+                  ? `Jumlah Tambahan (${updatingStockItem.satuan})`
+                  : `Total Stok Tersedia (${updatingStockItem.satuan})`}
+              </label>
+              <input
+                type="number"
+                min={stockUpdateMode === 'add' ? 1 : updatingStockItem.terpakai}
+                required
+                value={stockUpdateAmount}
+                onChange={(e) => setStockUpdateAmount(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-bold focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
+              />
+              {stockUpdateMode === 'add' && (
+                <div className="flex items-center gap-2 mt-2">
+                  {[10, 25, 50, 100].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setStockUpdateAmount(preset)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                        stockUpdateAmount === preset
+                          ? 'bg-teal-50 border-teal-300 text-teal-800'
+                          : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      +{preset}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Catatan (Opsional)</label>
+              <input
+                type="text"
+                value={stockUpdateNotes}
+                onChange={(e) => setStockUpdateNotes(e.target.value)}
+                placeholder="Misal: Droping dari Puskesmas..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
+              />
+            </div>
+
+            <div className="pt-3 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setUpdatingStockItem(null)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 font-semibold text-xs rounded-lg hover:bg-gray-50 cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-saas-primary hover:bg-saas-primary-active text-white font-semibold text-xs rounded-lg disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? 'Menyimpan...' : 'Simpan Stok'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {/* Modal Catat Penggunaan (Kader & Operator) */}
       {usingItem && (
@@ -708,10 +891,10 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={`grid ${editingItem ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
             <div>
               <label className="block text-xs font-bold text-gray-700 mb-1">
-                Stok Tersedia (Total Masuk) <span className="text-rose-500">*</span>
+                {editingItem ? 'Stok Tersedia (Total Masuk)' : 'Stok Awal'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="number"
@@ -723,16 +906,18 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">Jumlah Terpakai</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.terpakai}
-                onChange={(e) => setFormData({ ...formData, terpakai: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
-              />
-            </div>
+            {editingItem && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1">Jumlah Terpakai</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.terpakai}
+                  onChange={(e) => setFormData({ ...formData, terpakai: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
+                />
+              </div>
+            )}
           </div>
 
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs">

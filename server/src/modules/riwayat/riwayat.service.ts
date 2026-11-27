@@ -521,7 +521,7 @@ export const riwayatService = {
       const sigRow = sRow + 7;
       const tglTtdFormatted = filter.tanggalTtd
         ? new Date(filter.tanggalTtd).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-        : todayFormatted;
+        : '............................ 20....';
 
       // Kiri: Kader Posyandu
       sheet.mergeCells(`B${sigRow}:F${sigRow}`);
@@ -649,15 +649,15 @@ export const riwayatService = {
 
     // Kop Separator Line (Garis Ganda Penutup Kop Surat)
     const lineY = doc.y;
-    doc.lineWidth(1.5).moveTo(startX, lineY).lineTo(endX, lineY).strokeColor('#0f766e').stroke();
-    doc.lineWidth(0.5).moveTo(startX, lineY + 2.5).lineTo(endX, lineY + 2.5).strokeColor('#0f766e').stroke();
+    doc.lineWidth(1.5).moveTo(startX, lineY).lineTo(endX, lineY).strokeColor('#0A95E6').stroke();
+    doc.lineWidth(0.5).moveTo(startX, lineY + 2.5).lineTo(endX, lineY + 2.5).strokeColor('#0A95E6').stroke();
 
     doc.y = lineY + 7;
 
     const todayFormatted = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
     const tanggalTtdFormatted = filter.tanggalTtd
       ? new Date(filter.tanggalTtd).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-      : todayFormatted;
+      : '............................ 20....';
 
     const filterInfoArr = [];
     if (filter.bulan) filterInfoArr.push(`Bulan: ${NAMA_BULAN[filter.bulan - 1]}`);
@@ -704,15 +704,15 @@ export const riwayatService = {
       ];
 
       const drawTableHeader = (y: number) => {
-        // Multi-level Header: Height = 30pt (Row 1: 12pt, Row 2: 18pt) - Style Teal Emerald
+        // Multi-level Header: Height = 30pt (Row 1: 12pt, Row 2: 18pt) - Style Biru Utama
         const headerHeight = 30;
-        doc.rect(startX, y, printableWidth, headerHeight).fillAndStroke('#0f766e', '#0d9488');
+        doc.rect(startX, y, printableWidth, headerHeight).fillAndStroke('#0A95E6', '#087EC4');
         doc.fillColor('#ffffff').fontSize(6).font('Helvetica-Bold');
 
         // Vertical divider lines for main sections (full height 30pt)
         const fullHeightCols = [cNama, cRiwHt, cBB, cGds, cKeluhan];
         fullHeightCols.forEach(x => {
-          doc.moveTo(x, y).lineTo(x, y + headerHeight).strokeColor('#0d9488').lineWidth(0.5).stroke();
+          doc.moveTo(x, y).lineTo(x, y + headerHeight).strokeColor('#38BDF8').lineWidth(0.5).stroke();
         });
 
         // Vertical divider lines for Row 2 sub-headers (from y+12 to y+30)
@@ -723,11 +723,11 @@ export const riwayatService = {
           cKolest, cAsamUrat, cLPerut,
           cTindakan
         ].forEach(x => {
-          doc.moveTo(x, y + 12).lineTo(x, y + headerHeight).strokeColor('#0d9488').lineWidth(0.5).stroke();
+          doc.moveTo(x, y + 12).lineTo(x, y + headerHeight).strokeColor('#38BDF8').lineWidth(0.5).stroke();
         });
 
         // Horizontal line separating Row 1 group header and Row 2
-        doc.moveTo(cNama, y + 12).lineTo(endX, y + 12).strokeColor('#0d9488').lineWidth(0.5).stroke();
+        doc.moveTo(cNama, y + 12).lineTo(endX, y + 12).strokeColor('#38BDF8').lineWidth(0.5).stroke();
 
         // Row 1 Grouping Titles
         doc.text('NO', cNo, y + 11, { width: 16, align: 'center' });
@@ -1063,6 +1063,123 @@ export const riwayatService = {
     doc.text(kadesName, col1X, nameY, { width: colW, align: 'center', lineBreak: false });
     doc.text(bidanName, col2X, nameY, { width: colW, align: 'center', lineBreak: false });
     doc.text(kaurName, col3X, nameY, { width: colW, align: 'center', lineBreak: false });
+
+    // ─────────────────────────────────────────────────────────────
+    // HALAMAN BARU TERAKHIR: REKAPITULASI STOK PEMBERIAN PERLAKUAN
+    // ─────────────────────────────────────────────────────────────
+    const stokItems = await prisma.stokPerlakuan.findMany({
+      where: { posyanduId },
+      orderBy: { namaBarang: 'asc' },
+    });
+
+    doc.addPage();
+    let stokY = 30;
+
+    doc.fontSize(12).font('Helvetica-Bold').fillColor('#0f172a').text(
+      `REKAPITULASI STOK PEMBERIAN PERLAKUAN — POSYANDU ${rawPosName}`,
+      startX,
+      stokY,
+      { width: printableWidth, align: 'center', lineBreak: false }
+    );
+    stokY += 16;
+    doc.fontSize(9.5).font('Helvetica-Bold').fillColor('#334155').text(
+      `${desaKecStr} • ${tahunStr}`,
+      startX,
+      stokY,
+      { width: printableWidth, align: 'center', lineBreak: false }
+    );
+    stokY += 18;
+
+    const sNo = startX;
+    const sNama = sNo + 28;
+    const sKat = sNama + 200;
+    const sTersedia = sKat + 110;
+    const sTerpakai = sTersedia + 85;
+    const sSisa = sTerpakai + 80;
+    const sSatuan = sSisa + 85;
+    const sKet = sSatuan + 60;
+    const sKetW = endX - sKet;
+    const stokCols = [sNama, sKat, sTersedia, sTerpakai, sSisa, sSatuan, sKet];
+
+    const drawStokHeader = (y: number) => {
+      const h = 24;
+      doc.rect(startX, y, printableWidth, h).fillAndStroke('#0A95E6', '#087EC4');
+      doc.fillColor('#ffffff').fontSize(7).font('Helvetica-Bold');
+      doc.text('No', sNo, y + 8, { width: 28, align: 'center', lineBreak: false });
+      doc.text('Nama Barang / Perlakuan', sNama + 4, y + 8, { width: 192, align: 'left', lineBreak: false });
+      doc.text('Kategori', sKat, y + 8, { width: 110, align: 'center', lineBreak: false });
+      doc.text('Stok Tersedia', sTersedia, y + 8, { width: 85, align: 'center', lineBreak: false });
+      doc.text('Terpakai', sTerpakai, y + 8, { width: 80, align: 'center', lineBreak: false });
+      doc.text('Sisa Stok', sSisa, y + 8, { width: 85, align: 'center', lineBreak: false });
+      doc.text('Satuan', sSatuan, y + 8, { width: 60, align: 'center', lineBreak: false });
+      doc.text('Keterangan', sKet + 4, y + 8, { width: sKetW - 8, align: 'left', lineBreak: false });
+      stokCols.forEach((x) => {
+        doc.moveTo(x, y).lineTo(x, y + h).strokeColor('#38BDF8').lineWidth(0.5).stroke();
+      });
+      doc.fillColor('#0f172a');
+    };
+
+    drawStokHeader(stokY);
+    stokY += 24;
+
+    const stokRowH = 20;
+    if (stokItems.length === 0) {
+      doc.rect(startX, stokY, printableWidth, 24).fillAndStroke('#ffffff', '#cbd5e1');
+      doc.fontSize(7.5).font('Helvetica-Oblique').fillColor('#64748b').text(
+        'Belum ada data stok pemberian perlakuan yang tercatat',
+        startX,
+        stokY + 8,
+        { width: printableWidth, align: 'center', lineBreak: false }
+      );
+      stokY += 24;
+    } else {
+      stokItems.forEach((sItem, sIdx) => {
+        if (stokY + stokRowH > doc.page.height - 55) {
+          doc.addPage();
+          stokY = 30;
+          drawStokHeader(stokY);
+          stokY += 24;
+        }
+
+        const rowBg = sIdx % 2 === 0 ? '#f8fafc' : '#ffffff';
+        doc.rect(startX, stokY, printableWidth, stokRowH).fillAndStroke(rowBg, '#cbd5e1');
+        stokCols.forEach((x) => {
+          doc.moveTo(x, stokY).lineTo(x, stokY + stokRowH).strokeColor('#cbd5e1').lineWidth(0.5).stroke();
+        });
+
+        doc.font('Helvetica').fontSize(7).fillColor('#0f172a');
+        doc.text(String(sIdx + 1), sNo, stokY + 6, { width: 28, align: 'center', lineBreak: false });
+        doc.font('Helvetica-Bold').text(sItem.namaBarang.substring(0, 38), sNama + 4, stokY + 6, { width: 192, lineBreak: false });
+        doc.font('Helvetica').text(sItem.kategori || 'Umum', sKat, stokY + 6, { width: 110, align: 'center', lineBreak: false });
+        doc.text(String(sItem.stokTersedia), sTersedia, stokY + 6, { width: 85, align: 'center', lineBreak: false });
+        doc.text(String(sItem.terpakai), sTerpakai, stokY + 6, { width: 80, align: 'center', lineBreak: false });
+        doc.font('Helvetica-Bold').fillColor(sItem.sisa <= 15 ? '#CA8A04' : '#0f172a').text(
+          String(sItem.sisa),
+          sSisa,
+          stokY + 6,
+          { width: 85, align: 'center', lineBreak: false }
+        );
+        doc.font('Helvetica').fillColor('#0f172a').text(sItem.satuan || 'pcs', sSatuan, stokY + 6, { width: 60, align: 'center', lineBreak: false });
+        doc.text((sItem.catatan || '-').substring(0, 32), sKet + 4, stokY + 6, { width: sKetW - 8, lineBreak: false });
+
+        stokY += stokRowH;
+      });
+    }
+
+    // Ringkasan Total Stok
+    const sumTersedia = stokItems.reduce((acc, cur) => acc + cur.stokTersedia, 0);
+    const sumTerpakai = stokItems.reduce((acc, cur) => acc + cur.terpakai, 0);
+    const sumSisa = stokItems.reduce((acc, cur) => acc + cur.sisa, 0);
+    stokY += 8;
+    if (stokY + 26 <= doc.page.height - 30) {
+      doc.rect(startX, stokY, printableWidth, 24).fillAndStroke('#f8fafc', '#94a3b8');
+      doc.font('Helvetica-Bold').fontSize(7.5).fillColor('#0f172a').text(
+        `Ringkasan Stok:  ${stokItems.length} Jenis Barang   |   Total Tersedia: ${sumTersedia}   |   Total Terpakai: ${sumTerpakai}   |   Total Sisa Stok: ${sumSisa}`,
+        startX + 10,
+        stokY + 8,
+        { width: printableWidth - 20, align: 'left', lineBreak: false }
+      );
+    }
 
     // Page Numbers & Print Date Footer (Task.md: Tanggal print dokumen ditaruh di footer terakhir)
     const pages = doc.bufferedPageRange().count;

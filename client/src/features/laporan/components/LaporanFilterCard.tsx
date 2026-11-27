@@ -71,23 +71,13 @@ export default function LaporanFilterCard({
 
   return (
     <div className="bg-white rounded-xl border border-gray-200/80 p-5 shadow-2xs space-y-4">
-      {/* Baris 1: Pilihan Kategori, Posyandu, Bulan, Tahun, dan Rentang Tanggal */}
-      <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasPosyanduFilter ? "lg:grid-cols-6" : "lg:grid-cols-5"} gap-3.5`}>
-        {/* 1. Kategori Laporan */}
-        <div>
-          <label className="block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wider">
-            1. Sasaran Laporan
-          </label>
-          <div className="py-2 px-3 text-xs font-bold rounded-lg bg-teal-50 border border-teal-200 text-teal-800 text-center">
-            Pelayanan Lansia
-          </div>
-        </div>
-
-        {/* [Opsional] 2. Pilihan Posyandu */}
+      {/* Baris 1: Pilihan Posyandu, Bulan, Tahun, dan Rentang Tanggal */}
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${hasPosyanduFilter ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-3.5`}>
+        {/* [Opsional] 1. Pilihan Posyandu */}
         {hasPosyanduFilter && (
           <div>
             <label className="block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wider">
-              2. Posyandu
+              1. Posyandu
             </label>
             <select
               value={selectedPosyandu || "semua"}
@@ -109,7 +99,7 @@ export default function LaporanFilterCard({
         {/* Periode Bulan */}
         <div>
           <label className="block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wider">
-            {hasPosyanduFilter ? "3. Bulan" : "2. Bulan"}
+            {hasPosyanduFilter ? "2. Bulan" : "1. Bulan"}
           </label>
           <select
             value={filterMonth}
@@ -128,7 +118,7 @@ export default function LaporanFilterCard({
         {/* Periode Tahun */}
         <div>
           <label className="block text-xs font-bold text-gray-900 mb-2 uppercase tracking-wider">
-            {hasPosyanduFilter ? "4. Tahun" : "3. Tahun"}
+            {hasPosyanduFilter ? "3. Tahun" : "2. Tahun"}
           </label>
           <select
             value={filterYear}
@@ -222,7 +212,7 @@ export default function LaporanFilterCard({
           <button
             type="button"
             onClick={onOpenPreview}
-            disabled={isLoading || !hasData}
+            disabled={isLoading}
             className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm cursor-pointer"
             title="Pratinjau dokumen PDF sebelum diunduh atau dicetak"
           >
@@ -234,7 +224,7 @@ export default function LaporanFilterCard({
           <button
             type="button"
             onClick={onOpenPreview}
-            disabled={isExportingPdf || !hasData}
+            disabled={isExportingPdf}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm cursor-pointer"
             title="Pratinjau & Unduh format PDF"
           >
@@ -285,12 +275,13 @@ export default function LaporanFilterCard({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div>
               <label className="block text-[11px] font-bold text-gray-800 mb-1">
-                Tanggal Tanda Tangan
+                Tanggal Tanda Tangan (Opsional)
               </label>
               <input
                 type="date"
                 value={tanggalTtd}
                 onChange={(e) => setTanggalTtd(e.target.value)}
+                title="Kosongkan untuk menampilkan garis titik-titik tanggal pada laporan"
                 className="w-full px-2.5 py-1.5 text-xs font-semibold text-gray-900 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white"
               />
             </div>

@@ -671,35 +671,40 @@ export default function PelayananModule({
                   </div>
                 )}
 
-                {/* Tombol Simpan */}
-                <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPasien(null);
-                      resetLansiaForm();
-                    }}
-                    className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all"
-                  >
-                    Batal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSaving}
-                    className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Menyimpan...</span>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>{isEditingExam ? "Perbarui Pemeriksaan" : "Simpan Pemeriksaan"}</span>
-                      </>
-                    )}
-                  </button>
+                {/* Tombol Simpan (Sticky) */}
+                <div className="sticky bottom-0 z-20 -mx-6 px-6 py-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs border-t border-gray-200/80 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.04)] rounded-b-card flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-slate-500 hidden sm:inline truncate">
+                    Pasien: <strong className="text-slate-800 dark:text-slate-200">{selectedPasien.nama}</strong>
+                  </span>
+                  <div className="flex items-center justify-end gap-3 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPasien(null);
+                        resetLansiaForm();
+                      }}
+                      className="px-4 py-2 border border-gray-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-saas-primary hover:bg-saas-primary-active disabled:opacity-50 text-white rounded-xl text-xs font-bold shadow-md shadow-teal-500/20 transition-all cursor-pointer"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{isEditingExam ? "Perbarui Pemeriksaan" : "Simpan Pemeriksaan"}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

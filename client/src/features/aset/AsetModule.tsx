@@ -14,7 +14,6 @@ import {
   Trash2,
   RefreshCw,
   Box,
-  Eye,
   Upload,
   X,
   History,
@@ -86,12 +85,18 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [historyMap, setHistoryMap] = useState<Record<string, AsetHistoryEntry[]>>({});
+  const [breakdownMap, setBreakdownMap] = useState<
+    Record<string, { baik: number; rusakRingan: number; rusakBerat: number }>
+  >({});
 
   // Form State
   const [formData, setFormData] = useState({
     nama: '',
     foto: '',
     stok: 1,
+    baik: 1,
+    rusakRingan: 0,
+    rusakBerat: 0,
     kondisi: 'BAIK' as KondisiAset,
     tanggalMasukBaru: '',
     tanggalMasukSebelumnya: '',
@@ -129,10 +134,36 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
     try {
       const saved = localStorage.getItem(`aset_stock_history_${posyanduId}`);
       if (saved) setHistoryMap(JSON.parse(saved));
+      const savedBreakdown = localStorage.getItem(`aset_kondisi_breakdown_${posyanduId}`);
+      if (savedBreakdown) setBreakdownMap(JSON.parse(savedBreakdown));
     } catch {
       // ignore storage errors
     }
   }, [posyanduId]);
+
+  const getAsetBreakdown = (aset: Aset) => {
+    const saved = breakdownMap[aset.id];
+    if (saved && saved.baik + saved.rusakRingan + saved.rusakBerat === aset.stok) {
+      return saved;
+    }
+    return {
+      baik: aset.kondisi === 'BAIK' ? aset.stok : 0,
+      rusakRingan: aset.kondisi === 'RUSAK_RINGAN' ? aset.stok : 0,
+      rusakBerat: aset.kondisi === 'RUSAK_BERAT' ? aset.stok : 0,
+    };
+  };
+
+  const saveAsetBreakdown = (asetId: string, breakdown: { baik: number; rusakRingan: number; rusakBerat: number }) => {
+    setBreakdownMap((prev) => {
+      const next = { ...prev, [asetId]: breakdown };
+      try {
+        localStorage.setItem(`aset_kondisi_breakdown_${posyanduId}`, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
 
   const appendAsetHistory = (entry: Omit<AsetHistoryEntry, 'id'>) => {
     setHistoryMap((prev) => {
@@ -178,10 +209,36 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
       const matchSearch =
         item.nama.toLowerCase().includes(search.toLowerCase()) ||
         (item.catatan && item.catatan.toLowerCase().includes(search.toLowerCase()));
-      const matchKondisi = kondisiFilter === 'semua' || item.kondisi === kondisiFilter;
+      if (kondisiFilter === 'semua') return matchSearch;
+      const bd = getAsetBreakdown(item);
+      const matchKondisi =
+        (kondisiFilter === 'BAIK' && bd.baik > 0) ||
+        (kondisiFilter === 'RUSAK_RINGAN' && bd.rusakRingan > 0) ||
+        (kondisiFilter === 'RUSAK_BERAT' && bd.rusakBerat > 0);
       return matchSearch && matchKondisi;
     });
-  }, [asets, search, kondisiFilter]);
+  }, [asets, search, kondisiFilter, breakdownMap]);
+
+  const computedSummary = useMemo(() => {
+    let totalUnit = 0;
+    let totalBaik = 0;
+    let totalRusakRingan = 0;
+    let totalRusakBerat = 0;
+    for (const a of asets) {
+      const bd = getAsetBreakdown(a);
+      totalUnit += a.stok;
+      totalBaik += bd.baik;
+      totalRusakRingan += bd.rusakRingan;
+      totalRusakBerat += bd.rusakBerat;
+    }
+    return {
+      totalJenis: asets.length,
+      totalUnit: summary ? totalUnit : 0,
+      totalBaik,
+      totalRusakRingan,
+      totalRusakBerat,
+    };
+  }, [asets, summary, breakdownMap]);
 
   const openAddModal = () => {
     setEditingAset(null);
@@ -189,6 +246,9 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
       nama: '',
       foto: '',
       stok: 1,
+      baik: 1,
+      rusakRingan: 0,
+      rusakBerat: 0,
       kondisi: 'BAIK',
       tanggalMasukBaru: new Date().toISOString().slice(0, 10),
       tanggalMasukSebelumnya: '',
@@ -198,11 +258,15 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   };
 
   const openEditModal = (aset: Aset) => {
+    const bd = getAsetBreakdown(aset);
     setEditingAset(aset);
     setFormData({
       nama: aset.nama,
       foto: aset.foto || '',
       stok: aset.stok,
+      baik: bd.baik,
+      rusakRingan: bd.rusakRingan,
+      rusakBerat: bd.rusakBerat,
       kondisi: aset.kondisi,
       tanggalMasukBaru: aset.tanggalMasukBaru ? aset.tanggalMasukBaru.slice(0, 10) : '',
       tanggalMasukSebelumnya: aset.tanggalMasukSebelumnya ? aset.tanggalMasukSebelumnya.slice(0, 10) : '',
@@ -217,10 +281,26 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
       toast.error('Nama aset wajib diisi');
       return;
     }
-    if (formData.stok < 0) {
+    const totalStok = Number(formData.baik) + Number(formData.rusakRingan) + Number(formData.rusakBerat);
+    if (totalStok < 0) {
       toast.error('Stok minimal 0');
       return;
     }
+
+    const derivedKondisi: KondisiAset =
+      formData.baik > 0
+        ? 'BAIK'
+        : formData.rusakRingan > 0
+        ? 'RUSAK_RINGAN'
+        : formData.rusakBerat > 0
+        ? 'RUSAK_BERAT'
+        : 'BAIK';
+
+    const breakdownPayload = {
+      baik: Math.max(0, Number(formData.baik) || 0),
+      rusakRingan: Math.max(0, Number(formData.rusakRingan) || 0),
+      rusakBerat: Math.max(0, Number(formData.rusakBerat) || 0),
+    };
 
     setIsSubmitting(true);
     try {
@@ -228,23 +308,26 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
         const res = await asetApi.update(posyanduId, editingAset.id, {
           nama: formData.nama,
           foto: formData.foto || null,
-          stok: Number(formData.stok),
-          kondisi: formData.kondisi,
+          stok: totalStok,
+          kondisi: derivedKondisi,
           tanggalMasukBaru: formData.tanggalMasukBaru || null,
           tanggalMasukSebelumnya: formData.tanggalMasukSebelumnya || null,
           catatan: formData.catatan || null,
         });
         if (res.success) {
-          const delta = Number(formData.stok) - editingAset.stok;
+          saveAsetBreakdown(editingAset.id, breakdownPayload);
+          const delta = totalStok - editingAset.stok;
           appendAsetHistory({
             asetId: editingAset.id,
             tanggal: new Date().toISOString(),
             aktivitas:
               delta > 0 ? 'Penambahan Stok' : delta < 0 ? 'Pengurangan Stok' : 'Pembaruan Data',
             perubahanStok: delta,
-            stokAkhir: Number(formData.stok),
-            kondisi: formData.kondisi,
-            keterangan: formData.catatan?.trim() || `Update data aset (${formData.kondisi.replace('_', ' ')})`,
+            stokAkhir: totalStok,
+            kondisi: derivedKondisi,
+            keterangan:
+              formData.catatan?.trim() ||
+              `Baik: ${breakdownPayload.baik}, Rusak Ringan: ${breakdownPayload.rusakRingan}, Rusak Berat: ${breakdownPayload.rusakBerat}`,
           });
           toast.success('Data aset berhasil diperbarui');
           setIsModalOpen(false);
@@ -254,21 +337,24 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
         const res = await asetApi.create(posyanduId, {
           nama: formData.nama,
           foto: formData.foto || null,
-          stok: Number(formData.stok),
-          kondisi: formData.kondisi,
+          stok: totalStok,
+          kondisi: derivedKondisi,
           tanggalMasukBaru: formData.tanggalMasukBaru || null,
           tanggalMasukSebelumnya: formData.tanggalMasukSebelumnya || null,
           catatan: formData.catatan || null,
         });
         if (res.success && res.data) {
+          saveAsetBreakdown(res.data.id, breakdownPayload);
           appendAsetHistory({
             asetId: res.data.id,
             tanggal: formData.tanggalMasukBaru ? new Date(formData.tanggalMasukBaru).toISOString() : new Date().toISOString(),
             aktivitas: 'Aset Masuk',
-            perubahanStok: Number(formData.stok),
-            stokAkhir: Number(formData.stok),
-            kondisi: formData.kondisi,
-            keterangan: formData.catatan?.trim() || 'Pendaftaran aset baru',
+            perubahanStok: totalStok,
+            stokAkhir: totalStok,
+            kondisi: derivedKondisi,
+            keterangan:
+              formData.catatan?.trim() ||
+              `Baik: ${breakdownPayload.baik}, Rusak Ringan: ${breakdownPayload.rusakRingan}, Rusak Berat: ${breakdownPayload.rusakBerat}`,
           });
           toast.success('Aset baru berhasil ditambahkan');
           setIsModalOpen(false);
@@ -296,27 +382,34 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
     }
   };
 
-  const getKondisiBadge = (kondisi: KondisiAset) => {
-    switch (kondisi) {
-      case 'BAIK':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle className="w-3 h-3" /> Baik
-          </span>
-        );
-      case 'RUSAK_RINGAN':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <AlertTriangle className="w-3 h-3" /> Rusak Ringan
-          </span>
-        );
-      case 'RUSAK_BERAT':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
-            <XCircle className="w-3 h-3" /> Rusak Berat
-          </span>
-        );
+  const renderKondisiBadges = (aset: Aset) => {
+    const bd = getAsetBreakdown(aset);
+    if (aset.stok === 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
+          0 Unit
+        </span>
+      );
     }
+    return (
+      <div className="flex flex-wrap justify-end gap-1">
+        {bd.baik > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+            <CheckCircle className="w-3 h-3" /> {bd.baik} Baik
+          </span>
+        )}
+        {bd.rusakRingan > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
+            <AlertTriangle className="w-3 h-3" /> {bd.rusakRingan} Rusak Ringan
+          </span>
+        )}
+        {bd.rusakBerat > 0 && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 shadow-2xs">
+            <XCircle className="w-3 h-3" /> {bd.rusakBerat} Rusak Berat
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -364,8 +457,8 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
         <div className="bg-white p-4 rounded-xl border border-gray-200/80 shadow-2xs flex flex-col justify-between">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Total Jenis Aset</span>
           <div className="mt-2 flex items-baseline justify-between">
-            <span className="text-2xl font-extrabold text-gray-900">{summary?.totalJenis || 0}</span>
-            <span className="text-xs font-semibold text-gray-500">{summary?.totalUnit || 0} Unit Fisik</span>
+            <span className="text-2xl font-extrabold text-gray-900">{computedSummary.totalJenis}</span>
+            <span className="text-xs font-semibold text-gray-500">{computedSummary.totalUnit} Unit Fisik</span>
           </div>
         </div>
 
@@ -375,7 +468,7 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
             <CheckCircle className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-extrabold text-emerald-700">{summary?.totalBaik || 0}</span>
+            <span className="text-2xl font-extrabold text-emerald-700">{computedSummary.totalBaik}</span>
             <span className="text-xs font-normal text-gray-500 ml-1">unit</span>
           </div>
         </div>
@@ -386,7 +479,7 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
             <AlertTriangle className="w-4 h-4 text-amber-600" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-extrabold text-amber-700">{summary?.totalRusakRingan || 0}</span>
+            <span className="text-2xl font-extrabold text-amber-700">{computedSummary.totalRusakRingan}</span>
             <span className="text-xs font-normal text-gray-500 ml-1">unit</span>
           </div>
         </div>
@@ -397,7 +490,7 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
             <XCircle className="w-4 h-4 text-rose-600" />
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-extrabold text-rose-700">{summary?.totalRusakBerat || 0}</span>
+            <span className="text-2xl font-extrabold text-rose-700">{computedSummary.totalRusakBerat}</span>
             <span className="text-xs font-normal text-gray-500 ml-1">unit</span>
           </div>
         </div>
@@ -463,7 +556,8 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
           {filteredAsets.map((aset) => (
             <div
               key={aset.id}
-              className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs hover:shadow-md transition-all overflow-hidden flex flex-col justify-between"
+              onClick={() => setDetailAset(aset)}
+              className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs hover:shadow-md hover:border-teal-300 transition-all overflow-hidden flex flex-col justify-between cursor-pointer"
             >
               <div>
                 {/* Image Preview / Placeholder */}
@@ -483,7 +577,7 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
                       <span className="text-[10px] font-medium">Foto Belum Diunggah</span>
                     </div>
                   )}
-                  <div className="absolute top-3 right-3">{getKondisiBadge(aset.kondisi)}</div>
+                  <div className="absolute top-3 right-3 left-3 flex justify-end">{renderKondisiBadges(aset)}</div>
                   <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-xs text-white text-[11px] font-bold px-2.5 py-1 rounded-lg">
                     Stok: {aset.stok} Unit
                   </div>
@@ -522,31 +616,25 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
               </div>
 
               {/* Actions Footer */}
-              <div className="p-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => setDetailAset(aset)}
-                  className="p-1.5 text-saas-primary hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+              {isOperator && (
+                <div
+                  className="p-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-1"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <Eye className="w-3.5 h-3.5" /> Detail &amp; Riwayat
-                </button>
-                {isOperator && (
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => openEditModal(aset)}
-                      className="p-1.5 text-gray-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
-                    >
-                      <Pencil className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirmId(aset.id)}
-                      className="p-1.5 text-gray-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Hapus
-                    </button>
-                  </div>
-                )}
-              </div>
+                  <button
+                    onClick={() => openEditModal(aset)}
+                    className="p-1.5 text-gray-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmId(aset.id)}
+                    className="p-1.5 text-gray-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Hapus
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -573,34 +661,49 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Jumlah Stok Unit <span className="text-rose-500">*</span>
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-gray-700">
+                Rincian Kondisi Unit <span className="text-rose-500">*</span>
               </label>
-              <input
-                type="number"
-                min="0"
-                required
-                value={formData.stok}
-                onChange={(e) => setFormData({ ...formData, stok: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-600 focus:outline-none text-gray-900"
-              />
+              <span className="text-[11px] font-bold text-teal-700">
+                Total: {Number(formData.baik) + Number(formData.rusakRingan) + Number(formData.rusakBerat)} Unit
+              </span>
             </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-700 mb-1">
-                Kondisi Aset <span className="text-rose-500">*</span>
-              </label>
-              <select
-                value={formData.kondisi}
-                onChange={(e) => setFormData({ ...formData, kondisi: e.target.value as KondisiAset })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-600 focus:outline-none text-gray-900 font-semibold"
-              >
-                <option value="BAIK">Baik</option>
-                <option value="RUSAK_RINGAN">Rusak Ringan</option>
-                <option value="RUSAK_BERAT">Rusak Berat</option>
-              </select>
+            <div className="grid grid-cols-3 gap-2.5">
+              <div>
+                <label className="block text-[11px] font-semibold text-emerald-700 mb-1">Baik</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={formData.baik}
+                  onChange={(e) => setFormData({ ...formData, baik: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-emerald-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none text-gray-900 bg-emerald-50/40"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-amber-700 mb-1">Rusak Ringan</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={formData.rusakRingan}
+                  onChange={(e) => setFormData({ ...formData, rusakRingan: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-amber-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-amber-500 focus:outline-none text-gray-900 bg-amber-50/40"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-rose-700 mb-1">Rusak Berat</label>
+                <input
+                  type="number"
+                  min="0"
+                  required
+                  value={formData.rusakBerat}
+                  onChange={(e) => setFormData({ ...formData, rusakBerat: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-rose-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-rose-500 focus:outline-none text-gray-900 bg-rose-50/40"
+                />
+              </div>
             </div>
           </div>
 
@@ -735,9 +838,9 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
                 )}
               </div>
               <div className="flex-1 space-y-2">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-wrap items-start justify-between gap-2">
                   <h4 className="font-extrabold text-sm text-gray-900">{detailAset.nama}</h4>
-                  {getKondisiBadge(detailAset.kondisi)}
+                  {renderKondisiBadges(detailAset)}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-white px-3 py-2 rounded-lg border border-gray-200/80">

@@ -122,9 +122,7 @@ export default function LaporanModule({
   const [pageLansia, setPageLansia] = useState<number>(1);
 
   // State Pengaturan Tanda Tangan & Pejabat Desa
-  const [tanggalTtd, setTanggalTtd] = useState<string>(() =>
-    new Date().toISOString().slice(0, 10)
-  );
+  const [tanggalTtd, setTanggalTtd] = useState<string>("");
   const [namaKades, setNamaKades] = useState<string>("H. Ahmad Supriyadi");
   const [namaBidan, setNamaBidan] = useState<string>("Bd. Siti Nurhaliza, S.Tr.Keb");
   const [namaKaur, setNamaKaur] = useState<string>("Bambang Wijaya");
