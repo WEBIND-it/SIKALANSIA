@@ -160,7 +160,7 @@ export const riwayatService = {
     const kaders = await prisma.kader.findMany({ where: { posyanduId, isActive: true }, orderBy: { nama: 'asc' } });
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'Sistem Informasi Posyandu';
+    workbook.creator = 'Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia';
     workbook.created = new Date();
 
     const rawDesa = (posyandu.desa || 'WATULAWANG').trim();
@@ -776,7 +776,7 @@ export const riwayatService = {
         yPos += 24;
       } else {
         items.forEach((item, idx) => {
-          if (yPos > doc.page.height - 60) {
+          if (yPos + rowHeight > doc.page.height - 50) {
             doc.addPage();
             yPos = 30;
             drawTableHeader(yPos);
@@ -797,60 +797,57 @@ export const riwayatService = {
 
           doc.fillColor('#0f172a');
 
-          doc.text(String(idx + 1), cNo, yPos + 6, { width: 16, align: 'center' });
+          doc.text(String(idx + 1), cNo, yPos + 6, { width: 16, align: 'center', lineBreak: false });
           doc.font('Helvetica-Bold').text((item.nama || '-').substring(0, 22), cNama + 2, yPos + 6, { width: 80, lineBreak: false });
 
           // Tgl Lahir & NIK dipisahkan
           doc.font('Helvetica').fontSize(5.5);
           const tglStr = item.tanggalLahir ? item.tanggalLahir.substring(0, 10) : '-';
           const nikStr = item.nik || '-';
-          doc.text(tglStr, cTglLahir, yPos + 6, { width: 54, align: 'center' });
-          doc.text(nikStr, cNik, yPos + 6, { width: 76, align: 'center' });
+          doc.text(tglStr, cTglLahir, yPos + 6, { width: 54, align: 'center', lineBreak: false });
+          doc.text(nikStr, cNik, yPos + 6, { width: 76, align: 'center', lineBreak: false });
 
-          doc.text(item.jenisKelamin || '-', cJK, yPos + 6, { width: 16, align: 'center' });
-          doc.font('Helvetica-Bold').text(usiaText, cUsia, yPos + 6, { width: 28, align: 'center' });
+          doc.text(item.jenisKelamin || '-', cJK, yPos + 6, { width: 16, align: 'center', lineBreak: false });
+          doc.font('Helvetica-Bold').text(usiaText, cUsia, yPos + 6, { width: 28, align: 'center', lineBreak: false });
           doc.font('Helvetica');
 
-          // Highlight Riwayat HT & DM (Task.md: Beri highlight kategori dengan warna)
+          // Highlight Riwayat HT & DM (teks kuning tanpa background)
+          const highlightYellow = '#CA8A04';
           if (item.riwayatHt) {
-            doc.rect(cRiwHt + 1, yPos + 3, 22, 14).fill('#fee2e2');
-            doc.fillColor('#b91c1c').font('Helvetica-Bold').text('Ya', cRiwHt, yPos + 6, { width: 24, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text('Ya', cRiwHt, yPos + 6, { width: 24, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#64748b').text('Tdk', cRiwHt, yPos + 6, { width: 24, align: 'center' });
+            doc.fillColor('#64748b').text('Tdk', cRiwHt, yPos + 6, { width: 24, align: 'center', lineBreak: false });
           }
 
           if (item.riwayatDm) {
-            doc.rect(cRiwDm + 1, yPos + 3, 22, 14).fill('#ffedd5');
-            doc.fillColor('#c2410c').font('Helvetica-Bold').text('Ya', cRiwDm, yPos + 6, { width: 24, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text('Ya', cRiwDm, yPos + 6, { width: 24, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#64748b').text('Tdk', cRiwDm, yPos + 6, { width: 24, align: 'center' });
+            doc.fillColor('#64748b').text('Tdk', cRiwDm, yPos + 6, { width: 24, align: 'center', lineBreak: false });
           }
 
           // Pengukuran Fisik (BB, TB, TD)
           doc.fillColor('#0f172a');
-          doc.text(item.beratBadan !== undefined ? String(item.beratBadan) : '-', cBB, yPos + 6, { width: 26, align: 'center' });
-          doc.text(item.tinggiBadan !== undefined ? String(item.tinggiBadan) : '-', cTB, yPos + 6, { width: 26, align: 'center' });
+          doc.text(item.beratBadan !== undefined ? String(item.beratBadan) : '-', cBB, yPos + 6, { width: 26, align: 'center', lineBreak: false });
+          doc.text(item.tinggiBadan !== undefined ? String(item.tinggiBadan) : '-', cTB, yPos + 6, { width: 26, align: 'center', lineBreak: false });
 
           // TD Highlight jika Hipertensi (Sistol >= 140 atau Diastol >= 90)
           const isHipertensi = (item.tekananDarahSistol || 0) >= 140 || (item.tekananDarahDiastol || 0) >= 90;
           if (isHipertensi && tdText !== '-') {
-            doc.rect(cTD + 1, yPos + 2, 44, 16).fill('#fee2e2');
-            doc.fillColor('#991b1b').font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#0f172a').font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center' });
+            doc.fillColor('#0f172a').font('Helvetica-Bold').text(tdText, cTD, yPos + 6, { width: 46, align: 'center', lineBreak: false });
           }
           doc.font('Helvetica');
 
-          // Laboratorium & Lingkar Perut dengan Color Highlights
+          // Laboratorium & Lingkar Perut (teks kuning untuk nilai tinggi)
           const gdsNum = item.gulaDarahSewaktu !== undefined ? Number(item.gulaDarahSewaktu) : 0;
           const isGdsTinggi = gdsNum >= 200;
           const gdsStr = item.gulaDarahSewaktu !== undefined ? String(item.gulaDarahSewaktu) : '-';
 
           if (isGdsTinggi && gdsStr !== '-') {
-            doc.rect(cGds + 1, yPos + 2, 36, 16).fill('#fef3c7');
-            doc.fillColor('#92400e').font('Helvetica-Bold').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#0f172a').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center' });
+            doc.fillColor('#0f172a').text(gdsStr, cGds, yPos + 6, { width: 38, align: 'center', lineBreak: false });
           }
 
           const kolestNum = item.kolesterol !== undefined ? Number(item.kolesterol) : 0;
@@ -858,10 +855,9 @@ export const riwayatService = {
           const kolestStr = item.kolesterol !== undefined ? String(item.kolesterol) : '-';
 
           if (isKolestTinggi && kolestStr !== '-') {
-            doc.rect(cKolest + 1, yPos + 2, 38, 16).fill('#f3e8ff');
-            doc.fillColor('#6b21a8').font('Helvetica-Bold').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#0f172a').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center' });
+            doc.fillColor('#0f172a').text(kolestStr, cKolest, yPos + 6, { width: 40, align: 'center', lineBreak: false });
           }
 
           const asamUratNum = item.asamUrat !== undefined ? Number(item.asamUrat) : 0;
@@ -869,14 +865,13 @@ export const riwayatService = {
           const asamUratStr = item.asamUrat !== undefined ? String(item.asamUrat) : '-';
 
           if (isAsamUratTinggi && asamUratStr !== '-') {
-            doc.rect(cAsamUrat + 1, yPos + 2, 38, 16).fill('#e0f2fe');
-            doc.fillColor('#0369a1').font('Helvetica-Bold').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center' });
+            doc.fillColor(highlightYellow).font('Helvetica-Bold').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center', lineBreak: false });
           } else {
-            doc.fillColor('#0f172a').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center' });
+            doc.fillColor('#0f172a').text(asamUratStr, cAsamUrat, yPos + 6, { width: 40, align: 'center', lineBreak: false });
           }
 
           const lpStr = item.lingkarPerut !== undefined ? String(item.lingkarPerut) : '-';
-          doc.fillColor('#0f172a').text(lpStr, cLPerut, yPos + 6, { width: 36, align: 'center' });
+          doc.fillColor('#0f172a').text(lpStr, cLPerut, yPos + 6, { width: 36, align: 'center', lineBreak: false });
 
           // Keluhan & Tindakan Medis - Terpisah, Efisien, & Bounded tanpa overflow
           const keluhan = item.keluhan?.trim() || '-';
@@ -1029,7 +1024,7 @@ export const riwayatService = {
     let kaderY = finalY + 14;
     if (kaders.length === 0) {
       doc.fontSize(8).font('Helvetica').fillColor('#64748b');
-      doc.text('1. ( ............................................ )', startX + 5, kaderY, { width: 300 });
+      doc.text('1. ( ............................................ )', startX + 5, kaderY, { width: 300, lineBreak: false });
     } else {
       kaders.slice(0, 6).forEach((kader, kIdx) => {
         doc.fontSize(7.5).font('Helvetica').fillColor('#1e293b');
@@ -1071,11 +1066,11 @@ export const riwayatService = {
 
     // Page Numbers & Print Date Footer (Task.md: Tanggal print dokumen ditaruh di footer terakhir)
     const pages = doc.bufferedPageRange().count;
-    doc.page.margins.bottom = 0;
     for (let i = 0; i < pages; i++) {
       doc.switchToPage(i);
+      doc.page.margins.bottom = 0;
       doc.fontSize(7).font('Helvetica-Oblique').fillColor('#64748b').text(
-        `Dicetak pada: ${todayFormatted}  •  Halaman ${i + 1} dari ${pages} — Sistem Informasi Posyandu Lansia (SIKALANSIA)`,
+        `Dicetak pada: ${todayFormatted}  •  Halaman ${i + 1} dari ${pages} — Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia (SIKALANSIA)`,
         startX,
         doc.page.height - 18,
         { align: 'center', width: printableWidth, lineBreak: false }

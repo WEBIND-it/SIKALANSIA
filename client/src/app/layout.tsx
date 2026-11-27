@@ -13,10 +13,10 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SIKALANSIA - Sistem Informasi Posyandu Lansia",
+  title: "SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia",
   description: "Digitalisasi Pencatatan Pelayanan & Pemantauan Kesehatan Lansia — SIKALANSIA",
   icons: {
-    icon: "/logo.svg",
+    icon: "/logo-sikalansia.webp",
   },
 };
 

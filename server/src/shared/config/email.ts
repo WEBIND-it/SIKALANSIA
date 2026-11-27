@@ -57,7 +57,7 @@ export async function sendResetPasswordEmail({ to, nama, resetUrl }: SendResetEm
     </head>
     <body>
       <div class="container">
-        <div class="logo">SIKALANSIA - Sistem Informasi Posyandu</div>
+        <div class="logo">SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia</div>
         <h1>Atur Ulang Kata Sandi</h1>
         <p>Halo <strong>${nama}</strong>,</p>
         <p>Kami menerima permintaan untuk mengatur ulang kata sandi akun Kader SIKALANSIA Anda. Silakan klik tombol di bawah ini untuk melanjutkan:</p>
@@ -74,7 +74,7 @@ export async function sendResetPasswordEmail({ to, nama, resetUrl }: SendResetEm
         </p>
 
         <div class="footer">
-          &copy; 2026 SIKALANSIA - Sistem Informasi Posyandu.
+          &copy; 2026 SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia.
         </div>
       </div>
     </body>
@@ -177,7 +177,7 @@ export async function sendPosyanduReminderEmail({
         <p>Mohon mempersiapkan tensimeter, alat cek gula darah, timbangan, serta buku registrasi Lansia sebelum acara dimulai.</p>
         
         <div class="footer">
-          &copy; 2026 SIKALANSIA - Sistem Informasi Posyandu.
+          &copy; 2026 SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia.
         </div>
       </div>
     </body>

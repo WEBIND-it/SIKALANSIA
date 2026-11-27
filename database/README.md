@@ -1,6 +1,6 @@
 # Database Schema & Setup Guide
 
-Direktori ini berisi skema database untuk **Sistem Informasi Posyandu Lansia (SIKALANSIA)** berbasis PostgreSQL.
+Direktori ini berisi skema database untuk **Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia (SIKALANSIA)** berbasis PostgreSQL.
 
 ---
 

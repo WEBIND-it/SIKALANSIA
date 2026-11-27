@@ -44,13 +44,11 @@ function LeftHero() {
       <div className="space-y-6">
         {/* Brand */}
         <div className="flex items-center gap-3">
-          <div className="w-16 h-16 bg-white rounded-lg flex items-center justify-center p-2 shadow-sm shrink-0">
-            <img src="/logo.svg" alt="Logo SIKALANSIA" className="w-16 h-16 object-contain" />
-          </div>
+          <img src="/logo-sikalansia.webp" alt="Logo SIKALANSIA" className="w-20 h-20 object-contain shrink-0" />
           <div>
             <p className="text-white font-extrabold text-2xl tracking-tight leading-none">SIKALANSIA</p>
             <span className="inline-block text-xs text-teal-300 font-medium mt-1">
-              Sistem Informasi Posyandu
+              Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
             </span>
           </div>
         </div>
@@ -738,13 +736,11 @@ export default function LoginPage() {
           <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 sm:p-8 border border-slate-200/90 dark:border-slate-800">
             {/* Mobile / Tablet Logo */}
             <div className="lg:hidden flex items-center gap-3 mb-6">
-              <div className="w-9 h-9 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center p-1.5 shadow-2xs shrink-0">
-                <img src="/logo.svg" alt="Logo SIKALANSIA" className="w-6 h-6 object-contain" />
-              </div>
+              <img src="/logo-sikalansia.webp" alt="Logo SIKALANSIA" className="w-11 h-11 object-contain shrink-0" />
               <div>
                 <span className="font-black text-slate-900 dark:text-white text-base leading-none block">SIKALANSIA</span>
                 <span className="text-[9px] text-teal-700 dark:text-teal-400 font-bold uppercase tracking-wider block mt-0.5">
-                  Sistem Informasi Posyandu
+                  Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
                 </span>
               </div>
             </div>
@@ -774,7 +770,7 @@ export default function LoginPage() {
                 />
               </div>
               <p className="text-[11px] text-slate-400 font-medium">
-                © 2026 SIKALANSIA · Sistem Informasi Posyandu
+                © 2026 SIKALANSIA · Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
               </p>
             </div>
           </div>

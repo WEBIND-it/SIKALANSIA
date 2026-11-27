@@ -55,7 +55,7 @@ export default function RiwayatTrendChart({ chartData }: RiwayatTrendChartProps)
                 type="monotone"
                 dataKey="lansia"
                 name="Pemeriksaan Lansia"
-                stroke="#0D9488"
+                stroke="#0A95E6"
                 strokeWidth={3}
                 dot={{ r: 4 }}
               />

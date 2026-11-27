@@ -34,7 +34,6 @@ import {
   SessionLog,
   calculateAgeInYears,
 } from "./types";
-import PeriodeBanner from "./components/PeriodeBanner";
 import PelayananQueue from "./components/PelayananQueue";
 import LansiaExamFields from "./components/LansiaExamFields";
 import SessionLogsTable from "./components/SessionLogsTable";
@@ -468,12 +467,6 @@ export default function PelayananModule({
       <PageHelmet
         title="Pelayanan Posyandu Lansia — SIKALANSIA"
         description="Pencatatan pemeriksaan kesehatan lansia (tensi, gula darah, asam urat, kolesterol)."
-      />
-
-      {/* Periode Banner */}
-      <PeriodeBanner
-        activePeriode={activePeriode}
-        onOpenPeriodeModal={onOpenPeriodeModal}
       />
 
       {/* Header Halaman Pelayanan */}

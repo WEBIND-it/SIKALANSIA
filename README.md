@@ -1,4 +1,4 @@
-# 🏥 SIKALANSIA - Sistem Informasi Posyandu
+# 🏥 SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
 
 > Platform digital pencatatan tumbuh kembang balita & pelayanan kesehatan lansia untuk Posyandu Indonesia.
 
@@ -28,7 +28,7 @@
 
 ## 🌟 Tentang Proyek
 
-**SIKALANSIA** (Sistem Informasi Posyandu) adalah sistem informasi berbasis web yang dirancang untuk membantu kader posyandu dalam:
+**SIKALANSIA** (Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia) adalah sistem informasi berbasis web yang dirancang untuk membantu kader posyandu dalam:
 
 - Mencatat **tumbuh kembang balita** (berat badan, tinggi badan, lingkar kepala, status gizi)
 - Memantau **kesehatan lansia** (tekanan darah, gula darah, berat badan, lingkar perut)
@@ -443,5 +443,5 @@ MIT License — bebas digunakan untuk keperluan pendidikan dan non-komersial.
 ---
 
 <div align="center">
-  <p>© 2026 SIKALANSIA - Sistem Informasi Posyandu</p>
+  <p>© 2026 SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia</p>
 </div>

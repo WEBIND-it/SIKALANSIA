@@ -16,6 +16,8 @@ import {
   ArrowDownRight,
   TrendingDown,
   MoreVertical,
+  Eye,
+  History,
 } from 'lucide-react';
 import { stokPerlakuanApi, StokPerlakuan, StokPerlakuanSummary } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +27,16 @@ import toast from 'react-hot-toast';
 
 interface StokPerlakuanModuleProps {
   posyanduId: string;
+}
+
+interface StokHistoryEntry {
+  id: string;
+  itemId: string;
+  tanggal: string;
+  aktivitas: 'Stok Awal' | 'Penambahan Stok' | 'Pemakaian' | 'Penyesuaian';
+  perubahan: number;
+  sisaSetelah: number;
+  keterangan: string;
 }
 
 export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleProps) {
@@ -41,9 +53,11 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<StokPerlakuan | null>(null);
   const [usingItem, setUsingItem] = useState<StokPerlakuan | null>(null);
+  const [detailItem, setDetailItem] = useState<StokPerlakuan | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [historyMap, setHistoryMap] = useState<Record<string, StokHistoryEntry[]>>({});
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -98,6 +112,30 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
   useEffect(() => {
     fetchData();
   }, [posyanduId]);
+
+  useEffect(() => {
+    if (!posyanduId) return;
+    try {
+      const saved = localStorage.getItem(`stok_perlakuan_history_${posyanduId}`);
+      if (saved) setHistoryMap(JSON.parse(saved));
+    } catch {
+      // ignore storage errors
+    }
+  }, [posyanduId]);
+
+  const appendStokHistory = (entry: Omit<StokHistoryEntry, 'id'>) => {
+    setHistoryMap((prev) => {
+      const current = prev[entry.itemId] || [];
+      const nextList = [{ ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...current].slice(0, 50);
+      const next = { ...prev, [entry.itemId]: nextList };
+      try {
+        localStorage.setItem(`stok_perlakuan_history_${posyanduId}`, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -168,6 +206,16 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           catatan: formData.catatan || null,
         });
         if (res.success) {
+          const deltaTersedia = Number(formData.stokTersedia) - editingItem.stokTersedia;
+          const sisaBaru = Math.max(0, Number(formData.stokTersedia) - Number(formData.terpakai));
+          appendStokHistory({
+            itemId: editingItem.id,
+            tanggal: new Date().toISOString(),
+            aktivitas: deltaTersedia > 0 ? 'Penambahan Stok' : 'Penyesuaian',
+            perubahan: deltaTersedia,
+            sisaSetelah: sisaBaru,
+            keterangan: formData.catatan?.trim() || 'Pembaruan data stok barang',
+          });
           toast.success('Data stok perlakuan berhasil diperbarui');
           setIsModalOpen(false);
           fetchData();
@@ -181,7 +229,16 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           satuan: formData.satuan,
           catatan: formData.catatan || null,
         });
-        if (res.success) {
+        if (res.success && res.data) {
+          const sisaAwal = Math.max(0, Number(formData.stokTersedia) - Number(formData.terpakai));
+          appendStokHistory({
+            itemId: res.data.id,
+            tanggal: new Date().toISOString(),
+            aktivitas: 'Stok Awal',
+            perubahan: Number(formData.stokTersedia),
+            sisaSetelah: sisaAwal,
+            keterangan: formData.catatan?.trim() || 'Pendaftaran item stok baru',
+          });
           toast.success('Item stok perlakuan berhasil ditambahkan');
           setIsModalOpen(false);
           fetchData();
@@ -213,6 +270,14 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
         catatan: useNotes || undefined,
       });
       if (res.success) {
+        appendStokHistory({
+          itemId: usingItem.id,
+          tanggal: new Date().toISOString(),
+          aktivitas: 'Pemakaian',
+          perubahan: -Number(useAmount),
+          sisaSetelah: Math.max(0, usingItem.sisa - Number(useAmount)),
+          keterangan: useNotes.trim() || 'Pemakaian sesi pelayanan posyandu',
+        });
         toast.success(`Berhasil mencatat penggunaan ${useAmount} ${usingItem.satuan} ${usingItem.namaBarang}`);
         setUsingItem(null);
         fetchData();
@@ -404,8 +469,16 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                     <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                       <td className="px-4 py-3 text-gray-500 font-medium">{idx + 1}</td>
                       <td className="px-4 py-3">
-                        <span className="font-extrabold text-gray-900 block">{item.namaBarang}</span>
-                        <span className="text-[10px] text-gray-400">Satuan: {item.satuan}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDetailItem(item)}
+                          className="text-left group cursor-pointer"
+                        >
+                          <span className="font-extrabold text-gray-900 group-hover:text-teal-700 transition-colors block">
+                            {item.namaBarang}
+                          </span>
+                          <span className="text-[10px] text-gray-400">Satuan: {item.satuan}</span>
+                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
@@ -457,6 +530,18 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                                   : 'top-full mt-1'
                               }`}
                             >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuId(null);
+                                  setDetailItem(item);
+                                }}
+                                className="w-full px-3 py-2 text-xs font-medium text-teal-700 hover:bg-teal-50 flex items-center gap-2 transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-teal-600" />
+                                <span>Detail &amp; Riwayat</span>
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => {
@@ -686,6 +771,199 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           </div>
         </form>
       </Modal>
+
+      {/* Modal Detail & Riwayat Stok Barang */}
+      {detailItem && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDetailItem(null)}
+          title={`Detail & Riwayat Stok: ${detailItem.namaBarang}`}
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-5">
+            {/* Ringkasan Stok */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-xl bg-gray-50 border border-gray-200/80">
+                <span className="text-[10px] font-semibold text-gray-500 block">Stok Tersedia</span>
+                <strong className="text-base font-black text-gray-900">
+                  {detailItem.stokTersedia} {detailItem.satuan}
+                </strong>
+              </div>
+              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80">
+                <span className="text-[10px] font-semibold text-amber-700 block">Terpakai</span>
+                <strong className="text-base font-black text-amber-800">
+                  {detailItem.terpakai} {detailItem.satuan}
+                </strong>
+              </div>
+              <div className="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80">
+                <span className="text-[10px] font-semibold text-emerald-700 block">Sisa Stok</span>
+                <strong className="text-base font-black text-emerald-800">
+                  {detailItem.sisa} {detailItem.satuan}
+                </strong>
+              </div>
+            </div>
+
+            {/* Metadata & Progress */}
+            <div className="p-3.5 bg-gray-50/80 rounded-xl border border-gray-200/80 space-y-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-gray-600">
+                  Kategori: <strong className="text-gray-900">{detailItem.kategori || 'Umum'}</strong>
+                </span>
+                <span className="text-gray-600">
+                  Diperbarui:{' '}
+                  <strong className="text-gray-900">
+                    {detailItem.updatedAt
+                      ? new Date(detailItem.updatedAt).toLocaleDateString('id-ID', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '-'}
+                  </strong>
+                </span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-gray-200 overflow-hidden">
+                <div
+                  className="h-full bg-teal-600 transition-all"
+                  style={{
+                    width: `${
+                      detailItem.stokTersedia > 0
+                        ? Math.min(100, Math.round((detailItem.sisa / detailItem.stokTersedia) * 100))
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+              <p className="text-gray-600">
+                <span className="font-semibold text-gray-700">Keterangan:</span>{' '}
+                {detailItem.catatan || 'Tidak ada catatan tambahan.'}
+              </p>
+            </div>
+
+            {/* Riwayat Mutasi Stok */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <History className="w-4 h-4 text-teal-600" />
+                <h5 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                  Riwayat Stok &amp; Pemakaian
+                </h5>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600 font-bold border-b border-gray-200">
+                      <th className="px-3 py-2.5">Tanggal</th>
+                      <th className="px-3 py-2.5">Aktivitas</th>
+                      <th className="px-3 py-2.5 text-right">Perubahan</th>
+                      <th className="px-3 py-2.5 text-right">Sisa Stok</th>
+                      <th className="px-3 py-2.5">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(historyMap[detailItem.id] || []).map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50/70">
+                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                          {new Date(entry.tanggal).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              entry.aktivitas === 'Pemakaian'
+                                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                : 'bg-teal-50 text-teal-700 border border-teal-200'
+                            }`}
+                          >
+                            {entry.aktivitas}
+                          </span>
+                        </td>
+                        <td
+                          className={`px-3 py-2.5 text-right font-bold ${
+                            entry.perubahan < 0 ? 'text-amber-700' : 'text-emerald-700'
+                          }`}
+                        >
+                          {entry.perubahan > 0 ? `+${entry.perubahan}` : entry.perubahan} {detailItem.satuan}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                          {entry.sisaSetelah} {detailItem.satuan}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600">{entry.keterangan}</td>
+                      </tr>
+                    ))}
+
+                    {!(historyMap[detailItem.id]?.length) && (
+                      <>
+                        <tr className="bg-gray-50/40">
+                          <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                            {detailItem.createdAt
+                              ? new Date(detailItem.createdAt).toLocaleDateString('id-ID', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                  year: 'numeric',
+                                })
+                              : '-'}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                              Stok Terdaftar
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-bold text-emerald-700">
+                            +{detailItem.stokTersedia} {detailItem.satuan}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                            {detailItem.stokTersedia} {detailItem.satuan}
+                          </td>
+                          <td className="px-3 py-2.5 text-gray-600">Stok awal tersedia</td>
+                        </tr>
+                        {detailItem.terpakai > 0 && (
+                          <tr className="bg-gray-50/40">
+                            <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                              {detailItem.updatedAt
+                                ? new Date(detailItem.updatedAt).toLocaleDateString('id-ID', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                : '-'}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                Total Terpakai
+                              </span>
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-bold text-amber-700">
+                              -{detailItem.terpakai} {detailItem.satuan}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                              {detailItem.sisa} {detailItem.satuan}
+                            </td>
+                            <td className="px-3 py-2.5 text-gray-600">Akumulasi pemakaian tercatat</td>
+                          </tr>
+                        )}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDetailItem(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal Konfirmasi Hapus */}
       {deleteConfirmId && (

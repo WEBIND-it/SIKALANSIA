@@ -92,9 +92,7 @@ export default function PortalPublikPage() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 print:hidden">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center p-1.5 shadow-2xs shrink-0">
-              <img src="/logo.svg" alt="Logo SIKALANSIA" className="w-6 h-6 object-contain" />
-            </div>
+            <img src="/logo-sikalansia.webp" alt="Logo SIKALANSIA" className="w-10 h-10 object-contain shrink-0" />
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-slate-900 text-sm leading-none">SIKALANSIA</span>
@@ -102,7 +100,7 @@ export default function PortalPublikPage() {
                 <span className="text-xs font-semibold text-teal-800">Portal Publik</span>
               </div>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Sistem Informasi Posyandu &amp; Pelayanan Warga
+                Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia &amp; Pelayanan Warga
               </p>
             </div>
           </div>
@@ -288,7 +286,7 @@ export default function PortalPublikPage() {
 
             {/* Print Header */}
             <div className="hidden print:block mb-4 border-b pb-3 text-center">
-              <h2 className="text-base font-bold">SISTEM INFORMASI POSYANDU (SIKALANSIA)</h2>
+              <h2 className="text-base font-bold">Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia (SIKALANSIA)</h2>
               <p className="text-xs text-gray-600">Kartu Hasil Pemeriksaan Kesehatan Perorangan</p>
             </div>
 
@@ -518,7 +516,7 @@ export default function PortalPublikPage() {
       <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 print:hidden">
         <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
-            SIKALANSIA © 2026 · Sistem Informasi Posyandu · Portal Publik
+            SIKALANSIA © 2026 · Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia · Portal Publik
           </span>
           <div className="flex items-center gap-4">
             <Link href="/puskesmas" className="hover:text-teal-800 font-medium transition-colors">

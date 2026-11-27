@@ -213,7 +213,7 @@ export default function PuskesmasPreviewModal({
             {/* Footer Dokumen */}
             <div className="pt-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2 text-[10px] text-gray-400">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span>Dokumen digenerate otomatis oleh Sistem Informasi Posyandu Lansia.</span>
+                <span>Dokumen digenerate otomatis oleh Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia.</span>
               </div>
               <span>{new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</span>
             </div>

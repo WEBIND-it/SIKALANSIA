@@ -16,7 +16,7 @@ export default function PageHelmet({
   keywords = "posyandu lansia, kesehatan lansia, hipertensi, diabetes, posyandu digital, SIKALANSIA",
   ogType = "website",
 }: PageHelmetProps) {
-  const fullTitle = title ? `${title} | SIKALANSIA` : "SIKALANSIA - Sistem Informasi Posyandu Lansia";
+  const fullTitle = title ? `${title} | SIKALANSIA` : "SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia";
 
   return (
     <Helmet>

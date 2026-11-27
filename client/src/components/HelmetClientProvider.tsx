@@ -46,14 +46,14 @@ export default function HelmetClientProvider({ children }: { children: React.Rea
           },
           success: {
             iconTheme: {
-              primary: "#0d9488",
+              primary: "#489E23",
               secondary: "#ffffff",
             },
             style: {
-              border: "1px solid #ccfbf1",
+              border: "1px solid #d9f2ce",
               background: "#ffffff",
-              color: "#0f766e",
-              boxShadow: "0 12px 30px -4px rgba(13, 148, 136, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.04)",
+              color: "#489E23",
+              boxShadow: "0 12px 30px -4px rgba(72, 158, 35, 0.14), 0 4px 6px -2px rgba(0, 0, 0, 0.04)",
             },
           },
           error: {

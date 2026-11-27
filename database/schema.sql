@@ -1,5 +1,5 @@
 -- =============================================================================
--- SISTEM INFORMASI POSYANDU LANSIA (SIKALANSIA) - DATABASE SCHEMA
+-- Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia LANSIA (SIKALANSIA) - DATABASE SCHEMA
 -- Dialect: PostgreSQL (Compatible with Supabase, Neon, Railway, RDS, etc.)
 -- =============================================================================
 

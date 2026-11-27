@@ -14,6 +14,10 @@ import {
   Trash2,
   RefreshCw,
   Box,
+  Eye,
+  Upload,
+  X,
+  History,
 } from 'lucide-react';
 import { asetApi, Aset, KondisiAset, AsetSummary } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +28,45 @@ import toast from 'react-hot-toast';
 interface AsetModuleProps {
   posyanduId: string;
 }
+
+interface AsetHistoryEntry {
+  id: string;
+  asetId: string;
+  tanggal: string;
+  aktivitas: 'Aset Masuk' | 'Penambahan Stok' | 'Pengurangan Stok' | 'Pembaruan Data';
+  perubahanStok: number;
+  stokAkhir: number;
+  kondisi: KondisiAset;
+  keterangan: string;
+}
+
+const compressImageToDataUrl = (file: File, maxDim = 800, quality = 0.78): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Gagal memproses gambar'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const webp = canvas.toDataURL('image/webp', quality);
+        resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = () => reject(new Error('File gambar tidak valid'));
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => reject(new Error('Gagal membaca file'));
+    reader.readAsDataURL(file);
+  });
 
 export default function AsetModule({ posyanduId }: AsetModuleProps) {
   const { user } = useAuth();
@@ -38,8 +81,11 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAset, setEditingAset] = useState<Aset | null>(null);
+  const [detailAset, setDetailAset] = useState<Aset | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [historyMap, setHistoryMap] = useState<Record<string, AsetHistoryEntry[]>>({});
 
   // Form State
   const [formData, setFormData] = useState({
@@ -77,6 +123,55 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   useEffect(() => {
     fetchData();
   }, [posyanduId]);
+
+  useEffect(() => {
+    if (!posyanduId) return;
+    try {
+      const saved = localStorage.getItem(`aset_stock_history_${posyanduId}`);
+      if (saved) setHistoryMap(JSON.parse(saved));
+    } catch {
+      // ignore storage errors
+    }
+  }, [posyanduId]);
+
+  const appendAsetHistory = (entry: Omit<AsetHistoryEntry, 'id'>) => {
+    setHistoryMap((prev) => {
+      const current = prev[entry.asetId] || [];
+      const nextList = [{ ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...current].slice(0, 50);
+      const next = { ...prev, [entry.asetId]: nextList };
+      try {
+        localStorage.setItem(`aset_stock_history_${posyanduId}`, JSON.stringify(next));
+      } catch {
+        // ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar (JPG, PNG, atau WebP)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Ukuran gambar maksimal 5 MB');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const dataUrl = await compressImageToDataUrl(file);
+      setFormData((prev) => ({ ...prev, foto: dataUrl }));
+      toast.success('Foto aset berhasil dimuat');
+    } catch (err: any) {
+      toast.error(err.message || 'Gagal memproses gambar');
+    } finally {
+      setIsUploadingImage(false);
+      e.target.value = '';
+    }
+  };
 
   const filteredAsets = useMemo(() => {
     return asets.filter((item) => {
@@ -140,6 +235,17 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
           catatan: formData.catatan || null,
         });
         if (res.success) {
+          const delta = Number(formData.stok) - editingAset.stok;
+          appendAsetHistory({
+            asetId: editingAset.id,
+            tanggal: new Date().toISOString(),
+            aktivitas:
+              delta > 0 ? 'Penambahan Stok' : delta < 0 ? 'Pengurangan Stok' : 'Pembaruan Data',
+            perubahanStok: delta,
+            stokAkhir: Number(formData.stok),
+            kondisi: formData.kondisi,
+            keterangan: formData.catatan?.trim() || `Update data aset (${formData.kondisi.replace('_', ' ')})`,
+          });
           toast.success('Data aset berhasil diperbarui');
           setIsModalOpen(false);
           fetchData();
@@ -154,7 +260,16 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
           tanggalMasukSebelumnya: formData.tanggalMasukSebelumnya || null,
           catatan: formData.catatan || null,
         });
-        if (res.success) {
+        if (res.success && res.data) {
+          appendAsetHistory({
+            asetId: res.data.id,
+            tanggal: formData.tanggalMasukBaru ? new Date(formData.tanggalMasukBaru).toISOString() : new Date().toISOString(),
+            aktivitas: 'Aset Masuk',
+            perubahanStok: Number(formData.stok),
+            stokAkhir: Number(formData.stok),
+            kondisi: formData.kondisi,
+            keterangan: formData.catatan?.trim() || 'Pendaftaran aset baru',
+          });
           toast.success('Aset baru berhasil ditambahkan');
           setIsModalOpen(false);
           fetchData();
@@ -407,22 +522,31 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
               </div>
 
               {/* Actions Footer */}
-              {isOperator && (
-                <div className="p-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => openEditModal(aset)}
-                    className="p-1.5 text-gray-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Edit
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmId(aset.id)}
-                    className="p-1.5 text-gray-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Hapus
-                  </button>
-                </div>
-              )}
+              <div className="p-3 bg-gray-50/70 border-t border-gray-100 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDetailAset(aset)}
+                  className="p-1.5 text-saas-primary hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" /> Detail &amp; Riwayat
+                </button>
+                {isOperator && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEditModal(aset)}
+                      className="p-1.5 text-gray-600 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(aset.id)}
+                      className="p-1.5 text-gray-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1 text-xs font-semibold"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Hapus
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -482,16 +606,53 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
 
           <div>
             <label className="block text-xs font-bold text-gray-700 mb-1">
-              URL Foto Aset (Opsional)
+              Upload Foto Aset (Opsional)
             </label>
-            <input
-              type="url"
-              value={formData.foto}
-              onChange={(e) => setFormData({ ...formData, foto: e.target.value })}
-              placeholder="https://example.com/foto-timbangan.jpg"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-teal-600 focus:outline-none text-gray-900"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">Masukkan URL gambar online foto peralatan posyandu.</p>
+            {formData.foto ? (
+              <div className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
+                <img
+                  src={formData.foto}
+                  alt="Preview Foto Aset"
+                  className="w-full h-40 object-cover"
+                />
+                <div className="p-2.5 bg-white border-t border-gray-100 flex items-center justify-between gap-2">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-xs font-semibold cursor-pointer transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Ganti Foto</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, foto: '' })}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" /> Hapus Foto
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-gray-300 hover:border-teal-500 rounded-xl bg-gray-50/70 hover:bg-teal-50/30 cursor-pointer transition-all">
+                <Upload className="w-6 h-6 text-gray-400 mb-1.5" />
+                <span className="text-xs font-semibold text-gray-700">
+                  {isUploadingImage ? 'Memproses gambar...' : 'Klik untuk pilih gambar aset'}
+                </span>
+                <span className="text-[10px] text-gray-400 mt-0.5">
+                  Format JPG, PNG, atau WebP (maks. 5 MB)
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingImage}
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -551,6 +712,182 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
           </div>
         </form>
       </Modal>
+
+      {/* Modal Detail & Riwayat Stok Aset */}
+      {detailAset && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDetailAset(null)}
+          title={`Detail & Riwayat Aset: ${detailAset.nama}`}
+          maxWidth="max-w-2xl"
+        >
+          <div className="space-y-5">
+            {/* Header Info + Foto */}
+            <div className="flex flex-col sm:flex-row gap-4 bg-gray-50/80 p-4 rounded-xl border border-gray-200/80">
+              <div className="w-full sm:w-40 h-32 rounded-xl bg-white border border-gray-200 overflow-hidden flex items-center justify-center shrink-0">
+                {detailAset.foto ? (
+                  <img src={detailAset.foto} alt={detailAset.nama} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center text-gray-400">
+                    <ImageIcon className="w-8 h-8 stroke-1 mb-1" />
+                    <span className="text-[10px]">Tidak ada foto</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="font-extrabold text-sm text-gray-900">{detailAset.nama}</h4>
+                  {getKondisiBadge(detailAset.kondisi)}
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white px-3 py-2 rounded-lg border border-gray-200/80">
+                    <span className="text-[10px] text-gray-500 block">Jumlah Stok Saat Ini</span>
+                    <strong className="text-sm font-black text-gray-900">{detailAset.stok} Unit</strong>
+                  </div>
+                  <div className="bg-white px-3 py-2 rounded-lg border border-gray-200/80">
+                    <span className="text-[10px] text-gray-500 block">Stok Baru Masuk</span>
+                    <strong className="text-xs font-bold text-gray-900">
+                      {detailAset.tanggalMasukBaru
+                        ? new Date(detailAset.tanggalMasukBaru).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : '-'}
+                    </strong>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  <span className="font-semibold text-gray-700">Catatan / Lokasi:</span>{' '}
+                  {detailAset.catatan || 'Belum ada catatan lokasi penempatan.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Riwayat Stok Aset */}
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <History className="w-4 h-4 text-teal-600" />
+                <h5 className="text-xs font-extrabold text-gray-900 uppercase tracking-wider">
+                  Riwayat Stok &amp; Pembaruan
+                </h5>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 text-gray-600 font-bold border-b border-gray-200">
+                      <th className="px-3 py-2.5">Tanggal</th>
+                      <th className="px-3 py-2.5">Aktivitas</th>
+                      <th className="px-3 py-2.5 text-right">Perubahan</th>
+                      <th className="px-3 py-2.5 text-right">Stok Akhir</th>
+                      <th className="px-3 py-2.5">Keterangan</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(historyMap[detailAset.id] || []).map((entry) => (
+                      <tr key={entry.id} className="hover:bg-gray-50/70">
+                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                          {new Date(entry.tanggal).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              entry.aktivitas === 'Pengurangan Stok'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                : 'bg-teal-50 text-teal-700 border border-teal-200'
+                            }`}
+                          >
+                            {entry.aktivitas}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-bold">
+                          {entry.perubahanStok > 0
+                            ? `+${entry.perubahanStok}`
+                            : entry.perubahanStok === 0
+                            ? '0'
+                            : entry.perubahanStok}{' '}
+                          Unit
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                          {entry.stokAkhir} Unit
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600">{entry.keterangan}</td>
+                      </tr>
+                    ))}
+
+                    {detailAset.tanggalMasukBaru && (
+                      <tr className="bg-gray-50/40">
+                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                          {new Date(detailAset.tanggalMasukBaru).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Stok Baru Masuk
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-500">-</td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-gray-900">
+                          {detailAset.stok} Unit
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600">Tanggal masuk stok terbaru tercatat</td>
+                      </tr>
+                    )}
+
+                    {detailAset.tanggalMasukSebelumnya && (
+                      <tr className="bg-gray-50/40">
+                        <td className="px-3 py-2.5 text-gray-600 whitespace-nowrap">
+                          {new Date(detailAset.tanggalMasukSebelumnya).toLocaleDateString('id-ID', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                            Masuk Sebelumnya
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-right text-gray-500">-</td>
+                        <td className="px-3 py-2.5 text-right text-gray-500">-</td>
+                        <td className="px-3 py-2.5 text-gray-600">Riwayat penerimaan aset sebelumnya</td>
+                      </tr>
+                    )}
+
+                    {!(historyMap[detailAset.id]?.length) &&
+                      !detailAset.tanggalMasukBaru &&
+                      !detailAset.tanggalMasukSebelumnya && (
+                        <tr>
+                          <td colSpan={5} className="px-3 py-6 text-center text-gray-400">
+                            Belum ada riwayat perubahan stok yang tercatat.
+                          </td>
+                        </tr>
+                      )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-gray-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDetailAset(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal Konfirmasi Hapus */}
       {deleteConfirmId && (

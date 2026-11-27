@@ -96,15 +96,13 @@ function ResetPasswordFormContent() {
       <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-xl p-6 sm:p-8 shadow-xs border border-slate-200 dark:border-slate-800">
         {/* Header Logo */}
         <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-xl bg-white border border-slate-200/90 flex items-center justify-center p-1.5 shadow-2xs">
-            <img src="/logo.svg" alt="Logo SIKALANSIA" className="w-8 h-8 object-contain" />
-          </div>
+          <img src="/logo-sikalansia.webp" alt="Logo SIKALANSIA" className="w-12 h-12 object-contain shrink-0" />
           <div>
             <span className="font-black text-teal-950 text-xl tracking-tight leading-none block">
               SIKALANSIA
             </span>
             <span className="text-[9px] text-teal-700 font-bold uppercase tracking-wider block mt-0.5">
-              Sistem Informasi Posyandu
+              Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
             </span>
           </div>
         </div>

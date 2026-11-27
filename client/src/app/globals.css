@@ -209,15 +209,15 @@ html.dark .bg-teal-50\/30,
 html.dark .bg-teal-50\/40,
 html.dark .bg-teal-50\/50,
 html.dark .bg-teal-50\/60 {
-  background-color: rgba(20, 184, 166, 0.15) !important;
+  background-color: rgba(10, 149, 230, 0.15) !important;
 }
 html.dark .border-teal-100,
 html.dark .border-teal-200 {
-  border-color: rgba(20, 184, 166, 0.3) !important;
+  border-color: rgba(10, 149, 230, 0.3) !important;
 }
 html.dark .text-teal-800,
 html.dark .text-teal-900 {
-  color: #5EEAD4 !important;
+  color: #7DD3FC !important;
 }
 
 html.dark .bg-emerald-50,

@@ -1,5 +1,5 @@
 # 📖 BUKU PANDUAN PENGGUNA
-# SIKALANSIA — Sistem Informasi Posyandu
+# SIKALANSIA — Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
 
 > **Untuk:** Kader Posyandu & Masyarakat Umum  
 > **Versi:** 1.0  
@@ -26,7 +26,7 @@
 
 ## 1. Apa Itu SIKALANSIA & Peran Pengguna (Role)
 
-**SIKALANSIA** (Sistem Informasi Posyandu) adalah aplikasi digital berbasis web yang dirancang untuk mempermudah kader posyandu mencatat pemeriksaan, memantau status gizi anak secara otomatis dengan standar WHO/Kemenkes, skrining fisik lansia, serta menghasilkan laporan rekapitulasi secara instan.
+**SIKALANSIA** (Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia) adalah aplikasi digital berbasis web yang dirancang untuk mempermudah kader posyandu mencatat pemeriksaan, memantau status gizi anak secara otomatis dengan standar WHO/Kemenkes, skrining fisik lansia, serta menghasilkan laporan rekapitulasi secara instan.
 
 ### ✅ Fitur Utama SIKALANSIA:
 
@@ -919,4 +919,4 @@ Jika mengalami kendala teknis yang tidak tercantum di panduan ini, hubungi:
 
 *Panduan ini akan terus diperbarui seiring perkembangan aplikasi SIKALANSIA.*
 
-**© 2026 SIKALANSIA — Sistem Informasi Posyandu**
+**© 2026 SIKALANSIA — Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia**

@@ -554,12 +554,7 @@ export default function DashboardModule({ searchQuery, onNavigate, posyanduId, a
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-hairline pb-4 sm:pb-6">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h2>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
-              Periode: {periodeLabelAktif}
-            </span>
-          </div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Dashboard Overview</h2>
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 font-normal">
             Pemantauan status kesehatan lansia dan skrining penyakit tidak menular Posyandu Lansia untuk bulan <strong>{namaBulanAktif} {selectedTahun}</strong>.
           </p>

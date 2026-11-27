@@ -22,13 +22,32 @@ module.exports = {
           elevated: '#1E293B',   // Dark mode card elevation
         },
         saas: {
-          primary: '#0F766E',        // Clinical Teal 700
-          'primary-active': '#115E59', // Deep Teal 800
-          'primary-light': '#F0FDFA',  // Soft Teal 50
-          dark: '#0F172A',           // Slate 900 deep text
-          muted: '#475569',          // Slate 600 body text
+          primary: '#0A95E6',          // Brand Blue
+          'primary-active': '#087EC4', // Deep Brand Blue
+          'primary-light': '#EBF7FE',  // Soft Brand Blue 50
+          dark: '#0F172A',             // Slate 900 deep text
+          muted: '#475569',            // Slate 600 body text
           'muted-soft': '#64748B',     // Slate 500 subdued text
-          lightBg: '#FFFFFF',        // Card background
+          lightBg: '#FFFFFF',          // Card background
+        },
+        sidebar: '#112751',
+        brand: {
+          white: '#FFFFFF',
+          blue: '#0A95E6',
+          green: '#489E23',
+        },
+        teal: {
+          50: '#EBF7FE',
+          100: '#D6EEFC',
+          200: '#ADE0FA',
+          300: '#74CBF7',
+          400: '#35B2F1',
+          500: '#0A95E6',
+          600: '#0A95E6',
+          700: '#087EC4',
+          800: '#0767A1',
+          900: '#085584',
+          950: '#053554',
         },
         hairline: {
           DEFAULT: '#E2E8F0',
@@ -36,7 +55,7 @@ module.exports = {
         },
         trend: {
           successBg: '#ECFDF5',
-          successText: '#16A34A',    // Emerald 600
+          successText: '#489E23',    // Brand Green
           dangerBg: '#FEF2F2',
           dangerText: '#DC2626',     // Red 600
           warningBg: '#FFFBEB',

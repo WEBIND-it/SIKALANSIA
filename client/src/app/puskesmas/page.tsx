@@ -404,7 +404,7 @@ export default function PuskesmasPublicPage() {
         </div>
 
         <div className="text-center text-[11px] text-slate-500">
-          Sistem Informasi Posyandu Lansia • Kementerian Kesehatan RI
+          Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia • Kementerian Kesehatan RI
         </div>
       </div>
     );
@@ -541,7 +541,7 @@ export default function PuskesmasPublicPage() {
 
       {/* Footer Puskesmas Page */}
       <footer className="print:hidden border-t border-gray-200/80 pt-6 pb-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
-        <p>© 2026 SIKALANSIA · Sistem Informasi Posyandu Lansia</p>
+        <p>© 2026 SIKALANSIA · Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia</p>
       </footer>
 
       {/* Participant Detail Modal */}
