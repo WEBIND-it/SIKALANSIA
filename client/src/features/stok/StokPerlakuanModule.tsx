@@ -20,6 +20,7 @@ import {
   History,
 } from 'lucide-react';
 import { stokPerlakuanApi, StokPerlakuan, StokPerlakuanSummary } from '@/lib/api';
+import { appendLocalHistory, loadLocalMap, saveLocalMap } from '@/lib/historyStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHelmet from '@/components/PageHelmet';
 import Modal from '@/components/Modal';
@@ -119,26 +120,13 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
 
   useEffect(() => {
     if (!posyanduId) return;
-    try {
-      const saved = localStorage.getItem(`stok_perlakuan_history_${posyanduId}`);
-      if (saved) setHistoryMap(JSON.parse(saved));
-    } catch {
-      // ignore storage errors
-    }
+    setHistoryMap(loadLocalMap<StokHistoryEntry[]>(`stok_perlakuan_history_${posyanduId}`));
   }, [posyanduId]);
 
   const appendStokHistory = (entry: Omit<StokHistoryEntry, 'id'>) => {
-    setHistoryMap((prev) => {
-      const current = prev[entry.itemId] || [];
-      const nextList = [{ ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...current].slice(0, 50);
-      const next = { ...prev, [entry.itemId]: nextList };
-      try {
-        localStorage.setItem(`stok_perlakuan_history_${posyanduId}`, JSON.stringify(next));
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
+    setHistoryMap((prev) =>
+      appendLocalHistory(`stok_perlakuan_history_${posyanduId}`, entry.itemId, entry, prev)
+    );
   };
 
   const categories = useMemo(() => {
@@ -202,15 +190,21 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
     e.preventDefault();
     if (!updatingStockItem) return;
 
-    const newStokTersedia =
-      stockUpdateMode === 'add'
-        ? updatingStockItem.stokTersedia + Math.max(0, Number(stockUpdateAmount))
-        : Math.max(updatingStockItem.terpakai, Number(stockUpdateAmount));
-
     if (stockUpdateMode === 'add' && Number(stockUpdateAmount) <= 0) {
       toast.error('Jumlah penambahan stok minimal 1');
       return;
     }
+    if (stockUpdateMode === 'set' && Number(stockUpdateAmount) < updatingStockItem.terpakai) {
+      toast.error(
+        `Total stok tidak boleh kurang dari jumlah terpakai (${updatingStockItem.terpakai} ${updatingStockItem.satuan})`
+      );
+      return;
+    }
+
+    const newStokTersedia =
+      stockUpdateMode === 'add'
+        ? updatingStockItem.stokTersedia + Number(stockUpdateAmount)
+        : Number(stockUpdateAmount);
 
     const delta = newStokTersedia - updatingStockItem.stokTersedia;
     const newSisa = Math.max(0, newStokTersedia - updatingStockItem.terpakai);
@@ -350,6 +344,12 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
     try {
       const res = await stokPerlakuanApi.delete(posyanduId, id);
       if (res.success) {
+        setHistoryMap((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          saveLocalMap(`stok_perlakuan_history_${posyanduId}`, next);
+          return next;
+        });
         toast.success('Item stok perlakuan berhasil dihapus');
         setDeleteConfirmId(null);
         fetchData();

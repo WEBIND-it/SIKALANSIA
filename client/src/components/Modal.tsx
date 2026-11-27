@@ -10,6 +10,7 @@ interface ModalProps {
   title: string;
   description?: string;
   type?: "modal" | "drawer";
+  maxWidth?: string;
   children: React.ReactNode;
 }
 
@@ -19,6 +20,7 @@ export default function Modal({
   title,
   description,
   type = "modal",
+  maxWidth = "max-w-xl",
   children
 }: ModalProps) {
   const [mounted, setMounted] = useState(false);
@@ -50,7 +52,7 @@ export default function Modal({
         className={
           type === "drawer"
             ? "bg-white dark:bg-slate-900 h-full w-full max-w-lg shadow-2xl flex flex-col justify-between p-4 sm:p-6 relative overflow-y-auto animate-slide-in text-saas-dark dark:text-slate-100"
-            : "bg-white dark:bg-slate-900 rounded-card shadow-xl border border-gray-100 dark:border-slate-800 max-w-xl w-full p-4 sm:p-6 space-y-4 sm:space-y-5 relative max-h-[92vh] overflow-y-auto mx-2 text-saas-dark dark:text-slate-100"
+            : `bg-white dark:bg-slate-900 rounded-card shadow-xl border border-gray-100 dark:border-slate-800 ${maxWidth} w-full p-4 sm:p-6 space-y-4 sm:space-y-5 relative max-h-[92vh] overflow-y-auto mx-2 text-saas-dark dark:text-slate-100`
         }
       >
         {/* Modal Header */}

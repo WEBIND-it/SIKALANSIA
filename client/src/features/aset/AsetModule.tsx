@@ -19,6 +19,7 @@ import {
   History,
 } from 'lucide-react';
 import { asetApi, Aset, KondisiAset, AsetSummary } from '@/lib/api';
+import { appendLocalHistory, loadLocalMap, saveLocalMap } from '@/lib/historyStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHelmet from '@/components/PageHelmet';
 import Modal from '@/components/Modal';
@@ -93,11 +94,9 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   const [formData, setFormData] = useState({
     nama: '',
     foto: '',
-    stok: 1,
     baik: 1,
     rusakRingan: 0,
     rusakBerat: 0,
-    kondisi: 'BAIK' as KondisiAset,
     tanggalMasukBaru: '',
     tanggalMasukSebelumnya: '',
     catatan: '',
@@ -131,14 +130,12 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
 
   useEffect(() => {
     if (!posyanduId) return;
-    try {
-      const saved = localStorage.getItem(`aset_stock_history_${posyanduId}`);
-      if (saved) setHistoryMap(JSON.parse(saved));
-      const savedBreakdown = localStorage.getItem(`aset_kondisi_breakdown_${posyanduId}`);
-      if (savedBreakdown) setBreakdownMap(JSON.parse(savedBreakdown));
-    } catch {
-      // ignore storage errors
-    }
+    setHistoryMap(loadLocalMap<AsetHistoryEntry[]>(`aset_stock_history_${posyanduId}`));
+    setBreakdownMap(
+      loadLocalMap<{ baik: number; rusakRingan: number; rusakBerat: number }>(
+        `aset_kondisi_breakdown_${posyanduId}`
+      )
+    );
   }, [posyanduId]);
 
   const getAsetBreakdown = (aset: Aset) => {
@@ -156,27 +153,15 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
   const saveAsetBreakdown = (asetId: string, breakdown: { baik: number; rusakRingan: number; rusakBerat: number }) => {
     setBreakdownMap((prev) => {
       const next = { ...prev, [asetId]: breakdown };
-      try {
-        localStorage.setItem(`aset_kondisi_breakdown_${posyanduId}`, JSON.stringify(next));
-      } catch {
-        // ignore storage errors
-      }
+      saveLocalMap(`aset_kondisi_breakdown_${posyanduId}`, next);
       return next;
     });
   };
 
   const appendAsetHistory = (entry: Omit<AsetHistoryEntry, 'id'>) => {
-    setHistoryMap((prev) => {
-      const current = prev[entry.asetId] || [];
-      const nextList = [{ ...entry, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...current].slice(0, 50);
-      const next = { ...prev, [entry.asetId]: nextList };
-      try {
-        localStorage.setItem(`aset_stock_history_${posyanduId}`, JSON.stringify(next));
-      } catch {
-        // ignore storage errors
-      }
-      return next;
-    });
+    setHistoryMap((prev) =>
+      appendLocalHistory(`aset_stock_history_${posyanduId}`, entry.asetId, entry, prev)
+    );
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,11 +230,9 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
     setFormData({
       nama: '',
       foto: '',
-      stok: 1,
       baik: 1,
       rusakRingan: 0,
       rusakBerat: 0,
-      kondisi: 'BAIK',
       tanggalMasukBaru: new Date().toISOString().slice(0, 10),
       tanggalMasukSebelumnya: '',
       catatan: '',
@@ -263,11 +246,9 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
     setFormData({
       nama: aset.nama,
       foto: aset.foto || '',
-      stok: aset.stok,
       baik: bd.baik,
       rusakRingan: bd.rusakRingan,
       rusakBerat: bd.rusakBerat,
-      kondisi: aset.kondisi,
       tanggalMasukBaru: aset.tanggalMasukBaru ? aset.tanggalMasukBaru.slice(0, 10) : '',
       tanggalMasukSebelumnya: aset.tanggalMasukSebelumnya ? aset.tanggalMasukSebelumnya.slice(0, 10) : '',
       catatan: aset.catatan || '',
@@ -373,6 +354,18 @@ export default function AsetModule({ posyanduId }: AsetModuleProps) {
     try {
       const res = await asetApi.delete(posyanduId, id);
       if (res.success) {
+        setBreakdownMap((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          saveLocalMap(`aset_kondisi_breakdown_${posyanduId}`, next);
+          return next;
+        });
+        setHistoryMap((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          saveLocalMap(`aset_stock_history_${posyanduId}`, next);
+          return next;
+        });
         toast.success('Aset berhasil dihapus');
         setDeleteConfirmId(null);
         fetchData();
