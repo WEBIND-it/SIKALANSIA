@@ -13,10 +13,46 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia Lansia",
-  description: "Digitalisasi Pencatatan Pelayanan & Pemantauan Kesehatan Lansia — SIKALANSIA",
+  title: {
+    default: "SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia",
+    template: "%s | SIKALANSIA",
+  },
+  description:
+    "Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia (SIKALANSIA) untuk pencatatan pemeriksaan kesehatan lansia, pemantauan faktor risiko, inventaris aset, stok perlakuan, dan pelaporan posyandu.",
+  keywords: [
+    "SIKALANSIA",
+    "posyandu lansia",
+    "sistem informasi posyandu",
+    "kesehatan lansia",
+    "skrining hipertensi diabetes",
+    "posyandu digital",
+  ],
+  authors: [{ name: "SIKALANSIA" }],
   icons: {
-    icon: "/logo-sikalansia.webp",
+    icon: [{ url: "/logo-sikalansia.webp", type: "image/webp" }],
+    shortcut: "/logo-sikalansia.webp",
+    apple: "/logo-sikalansia.webp",
+  },
+  openGraph: {
+    title: "SIKALANSIA - Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia",
+    description:
+      "Digitalisasi pencatatan pelayanan, pemantauan kesehatan lansia, stok perlakuan, dan pelaporan posyandu secara terpadu.",
+    type: "website",
+    locale: "id_ID",
+    siteName: "SIKALANSIA",
+    images: [
+      {
+        url: "/logo-sikalansia.webp",
+        alt: "Logo SIKALANSIA",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "SIKALANSIA - Sistem Informasi Posyandu Lansia",
+    description:
+      "Digitalisasi pencatatan pelayanan & pemantauan kesehatan lansia — SIKALANSIA.",
+    images: ["/logo-sikalansia.webp"],
   },
 };
 
