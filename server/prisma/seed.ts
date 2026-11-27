@@ -102,6 +102,8 @@ async function main() {
     { bulan: 7, tahun: 2026, nama: 'Periode Pelayanan Juli 2026' },
     { bulan: 8, tahun: 2026, nama: 'Periode Pelayanan Agustus 2026' },
     { bulan: 9, tahun: 2026, nama: 'Periode Pelayanan September 2026' },
+    { bulan: 10, tahun: 2026, nama: 'Periode Pelayanan Oktober 2026' },
+    { bulan: 11, tahun: 2026, nama: 'Periode Pelayanan November 2026' },
   ];
 
   await prisma.periodePelayanan.createMany({
@@ -111,11 +113,11 @@ async function main() {
       bulan: p.bulan,
       tahun: p.tahun,
       tanggal: new Date(Date.UTC(p.tahun, p.bulan - 1, 10)),
-      status: (p.tahun === 2026 && p.bulan === 9) ? 'AKTIF' : 'SELESAI',
+      status: (p.tahun === 2026 && p.bulan === 11) ? 'AKTIF' : 'SELESAI',
       catatan: `Layanan rutin posyandu ${p.nama}`,
     })),
   });
-  console.log(`✅ ${periodesData.length} Periode Pelayanan berhasil dibuat (Januari 2025 - September 2026).`);
+  console.log(`✅ ${periodesData.length} Periode Pelayanan berhasil dibuat (Januari 2025 - November 2026).`);
 
   // 5. Data 25 Lansia
   const lansiasRaw = [
