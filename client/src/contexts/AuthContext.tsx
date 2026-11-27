@@ -83,23 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(res.data.token);
       setUser(res.data.kader as AuthUser);
     } catch (err: any) {
-      const normInput = emailOrUsername.trim().toLowerCase();
-      if (
-        (normInput === "puskesmas" || normInput === "puskesmas@gmail.com") &&
-        password === "password123"
-      ) {
-        const mockPuskesmasUser: AuthUser = {
-          id: "puskesmas-demo-id",
-          nama: "Petugas Puskesmas Wilayah",
-          username: "puskesmas",
-          email: "puskesmas@gmail.com",
-          role: "PUSKESMAS",
-          posyandu: { id: "puskesmas-wilayah-id", nama: "Puskesmas Kecamatan" },
-        };
-        setToken("mock-puskesmas-token");
-        setUser(mockPuskesmasUser);
-        return;
-      }
       throw err;
     }
   }, []);

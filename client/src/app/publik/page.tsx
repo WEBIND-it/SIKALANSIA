@@ -4,14 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Search,
-  Building2,
   Calendar,
   User,
   CheckCircle2,
   AlertCircle,
   Printer,
   RotateCcw,
-  ArrowRight,
   Loader2,
   FileText,
   ClipboardCheck,
@@ -107,12 +105,10 @@ export default function PortalPublikPage() {
 
           <div className="flex items-center gap-2">
             <Link
-              href="/puskesmas"
+              href="/"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors"
             >
-              <Building2 className="w-3.5 h-3.5 text-slate-500" />
-              <span>Portal Puskesmas</span>
-              <ArrowRight className="w-3 h-3 text-slate-400" />
+              <span>Aplikasi Posyandu</span>
             </Link>
           </div>
         </div>
@@ -519,9 +515,6 @@ export default function PortalPublikPage() {
             SIKALANSIA © 2026 · Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia · Portal Publik
           </span>
           <div className="flex items-center gap-4">
-            <Link href="/puskesmas" className="hover:text-teal-800 font-medium transition-colors">
-              Portal Puskesmas
-            </Link>
             <Link href="/" className="hover:text-teal-800 font-medium transition-colors">
               Aplikasi Posyandu
             </Link>

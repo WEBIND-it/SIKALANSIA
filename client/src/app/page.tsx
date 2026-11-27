@@ -20,7 +20,6 @@ import {
   CircleNotch,
   List,
   X,
-  Buildings,
   User,
   PencilSimple,
   Envelope,
@@ -482,56 +481,6 @@ export default function Home() {
     return <LoginPage />;
   }
 
-  // ── User Puskesmas tidak bisa mengakses aplikasi Posyandu ─
-  if (user.role === "PUSKESMAS") {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 sm:p-6">
-        <header className="max-w-xl w-full mx-auto flex items-center justify-between pb-3 border-b border-slate-200">
-          <div className="flex items-center gap-2">
-            <img src="/logo-sikalansia.webp" alt="Logo SIKALANSIA" className="w-9 h-9 object-contain shrink-0" />
-            <span className="font-bold text-slate-900 text-sm">SIKALANSIA</span>
-          </div>
-          <button
-            onClick={logout}
-            className="text-xs text-red-600 hover:text-red-700 font-medium cursor-pointer"
-          >
-            Keluar
-          </button>
-        </header>
-
-        <main className="max-w-md w-full mx-auto my-auto bg-white border border-slate-200 rounded-xl p-6 sm:p-8 shadow-xs text-center">
-          <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center mx-auto mb-3">
-            <WarningCircle className="w-6 h-6" weight="bold" />
-          </div>
-          <h2 className="text-base font-bold text-slate-900">
-            Akses Dibatasi: Khusus Kader Posyandu
-          </h2>
-          <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-            Akun Anda terdaftar sebagai <strong>Petugas Puskesmas</strong> ({user.nama}). Petugas Puskesmas tidak dapat mengakses aplikasi pencatatan kader Posyandu. Silakan gunakan Portal Puskesmas untuk memantau rekapitulasi data.
-          </p>
-          <div className="mt-5 space-y-2">
-            <a
-              href="/puskesmas"
-              className="w-full py-2.5 px-4 bg-teal-700 hover:bg-teal-800 text-white font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs"
-            >
-              <span>Buka Portal Puskesmas →</span>
-            </a>
-            <button
-              onClick={logout}
-              className="w-full py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors cursor-pointer"
-            >
-              Keluar dan Masuk sebagai Kader Posyandu
-            </button>
-          </div>
-        </main>
-
-        <footer className="text-center text-xs text-slate-400 py-3">
-          SIKALANSIA © 2026 · Sistem Informasi Pengelolaan dan Visualisasi Data Posyandu Lansia
-        </footer>
-      </div>
-    );
-  }
-
   // Categorized Navigation Sections
   const navSections = isKader
     ? [
@@ -853,21 +802,6 @@ export default function Home() {
             <>
               <div className="relative group flex justify-center">
                 <a
-                  href="/puskesmas"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-11 h-11 flex items-center justify-center rounded-xl text-white bg-white/15 hover:bg-white/25 border border-white/25 transition-all"
-                  aria-label="Portal Puskesmas"
-                >
-                  <Buildings className="w-5 h-5 text-white" weight="bold" />
-                </a>
-                <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl top-1/2 -translate-y-1/2">
-                  Portal Puskesmas ↗
-                </div>
-              </div>
-
-              <div className="relative group flex justify-center">
-                <a
                   href="/publik"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -916,15 +850,6 @@ export default function Home() {
             </>
           ) : (
             <>
-              <a
-                href="/puskesmas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/15 hover:bg-white/25 transition-all border border-white/25"
-              >
-                <Buildings className="w-4 h-4 shrink-0 text-white" weight="bold" />
-                <span>Portal Puskesmas ↗</span>
-              </a>
               <a
                 href="/publik"
                 target="_blank"
@@ -1065,15 +990,6 @@ export default function Home() {
                 </button>
               </div>
 
-              <a
-                href="/puskesmas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/15 hover:bg-white/25 transition-all border border-white/25"
-              >
-                <Buildings className="w-4 h-4 shrink-0 text-white" weight="bold" />
-                <span>Portal Puskesmas ↗</span>
-              </a>
               <a
                 href="/publik"
                 target="_blank"

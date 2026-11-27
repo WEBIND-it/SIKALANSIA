@@ -313,7 +313,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-2xs">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200/60 flex items-center justify-center text-rose-700">
+            <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200/60 flex items-center justify-center text-teal-700">
               <HeartPulse className="w-5 h-5" />
             </div>
             <div>
@@ -338,7 +338,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           {isOperator && (
             <button
               onClick={openAddModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-700 hover:bg-rose-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-saas-primary hover:bg-saas-primary-active text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Tambah Item Stok</span>
@@ -403,7 +403,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari obat, vitamin, stick GDS..."
-            className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-600 text-gray-900 bg-gray-50/50"
+            className="w-full pl-9 pr-3 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-saas-primary text-gray-900 bg-gray-50/50"
           />
         </div>
 
@@ -412,7 +412,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
           <select
             value={kategoriFilter}
             onChange={(e) => setKategoriFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-rose-600"
+            className="px-3 py-2 border border-gray-200 rounded-lg text-xs font-semibold text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-saas-primary"
           >
             <option value="semua">Semua Kategori</option>
             <option value="Vitamin">Vitamin</option>
@@ -674,7 +674,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
               value={formData.namaBarang}
               onChange={(e) => setFormData({ ...formData, namaBarang: e.target.value })}
               placeholder="Contoh: Vitamin B Kompleks / Stick Gula Darah"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-600 focus:outline-none text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
             />
           </div>
 
@@ -684,7 +684,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
               <select
                 value={formData.kategori}
                 onChange={(e) => setFormData({ ...formData, kategori: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-rose-600 focus:outline-none"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-900 focus:ring-2 focus:ring-saas-primary focus:outline-none"
               >
                 <option value="Vitamin">Vitamin</option>
                 <option value="Stick Gula Darah">Stick Gula Darah</option>
@@ -703,7 +703,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                 value={formData.satuan}
                 onChange={(e) => setFormData({ ...formData, satuan: e.target.value })}
                 placeholder="tablet / strip / pcs / botol"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-600 focus:outline-none text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
               />
             </div>
           </div>
@@ -719,7 +719,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                 required
                 value={formData.stokTersedia}
                 onChange={(e) => setFormData({ ...formData, stokTersedia: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-600 focus:outline-none text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
               />
             </div>
 
@@ -730,7 +730,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
                 min="0"
                 value={formData.terpakai}
                 onChange={(e) => setFormData({ ...formData, terpakai: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-600 focus:outline-none text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
               />
             </div>
           </div>
@@ -749,7 +749,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
               value={formData.catatan}
               onChange={(e) => setFormData({ ...formData, catatan: e.target.value })}
               placeholder="Contoh: Expired date: Desember 2027..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-600 focus:outline-none text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-saas-primary focus:outline-none text-gray-900"
             />
           </div>
 
@@ -764,7 +764,7 @@ export default function StokPerlakuanModule({ posyanduId }: StokPerlakuanModuleP
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-semibold text-xs rounded-lg disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              className="px-4 py-2 bg-saas-primary hover:bg-saas-primary-active text-white font-semibold text-xs rounded-lg disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
             >
               {isSubmitting ? 'Menyimpan...' : editingItem ? 'Perbarui Data' : 'Simpan Barang'}
             </button>

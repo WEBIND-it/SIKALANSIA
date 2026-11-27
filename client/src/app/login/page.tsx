@@ -72,12 +72,6 @@ function LeftHero() {
         >
           <Globe className="w-3.5 h-3.5" /> Portal Publik →
         </Link>
-        <Link
-          href="/puskesmas"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold transition-colors"
-        >
-          <Building2 className="w-3.5 h-3.5" /> Portal Puskesmas
-        </Link>
       </div>
     </div>
   );
@@ -686,11 +680,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!isLoading && user && posyanduId) {
-      if (user.role === "PUSKESMAS") {
-        router.replace("/puskesmas");
-      } else {
-        router.replace("/");
-      }
+      router.replace("/");
     }
   }, [user, posyanduId, isLoading, router]);
 
@@ -718,10 +708,10 @@ export default function LoginPage() {
         description="Portal masuk dan pendaftaran Posyandu digital untuk Kader dan Pengelola SIKALANSIA."
       />
       <div className="relative min-h-screen w-full flex items-center justify-center overflow-x-hidden">
-        {/* Full Background Puskesmas Image */}
+        {/* Full Background Posyandu Image */}
         <img
-          src="/puskesmas.webp"
-          alt="Gedung Puskesmas"
+          src="/posyandu.webp"
+          alt="Kegiatan Posyandu Lansia"
           className="absolute inset-0 w-full h-full object-cover select-none"
         />
         {/* Dark Clinical Contrast Overlay */}
