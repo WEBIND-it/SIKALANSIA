@@ -32,6 +32,7 @@ import {
   Calendar,
   Trash,
   Globe,
+  DotsNine,
 } from "@phosphor-icons/react";
 import { Sun, Moon, Package, HeartPulse } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
@@ -52,6 +53,7 @@ import PengaturanModule from "../features/pengaturan/PengaturanModule";
 import ManajemenAkunModule from "../features/pengaturan/ManajemenAkunModule";
 import BantuanModule from "../features/bantuan/BantuanModule";
 import LansiaIcon from "../components/LansiaIcon";
+import OdooMenuPage from "../components/OdooMenuPage";
 
 // Login Page (rendered inline when not authenticated)
 import LoginPage from "./login/page";
@@ -147,6 +149,7 @@ export default function Home() {
   const [selectedLansiaId, setSelectedLansiaId] = useState<string | undefined>(undefined);
   const [showNotification, setShowNotification] = useState(false);
   const [activeMenu, setActiveMenu] = useState("Overview");
+  const [showMenuPage, setShowMenuPage] = useState(true);
   const [navigationOrigin, setNavigationOrigin] = useState<string | null>(null);
   const [navKey, setNavKey] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -530,6 +533,7 @@ export default function Home() {
 
   // ── Conditional Rendering of Views ──────────────────────
   const handleDashboardNavigate = (menu: string, patientId?: string) => {
+    setShowMenuPage(false);
     if (isKader) {
       setActiveMenu("Pelayanan");
       return;
@@ -662,7 +666,8 @@ export default function Home() {
     .toUpperCase();
 
   const handleMenuSelect = (menuName: string) => {
-    if (isKader && menuName !== "Pelayanan") {
+    setShowMenuPage(false);
+    if (isKader && menuName !== "Pelayanan" && menuName !== "Bantuan") {
       setActiveMenu("Pelayanan");
       return;
     }
@@ -676,6 +681,24 @@ export default function Home() {
     setShowNotification(false);
     setShowProfileMenu(false);
   };
+
+  if (showMenuPage) {
+    return (
+      <OdooMenuPage
+        userName={user.nama}
+        posyanduName={user.posyandu?.nama}
+        isKader={isKader}
+        resolvedTheme={resolvedTheme}
+        onToggleTheme={() => {
+          const nextTheme = resolvedTheme === "dark" ? "light" : "dark";
+          setTheme(nextTheme);
+          toast.success(nextTheme === "dark" ? "Mode Gelap diaktifkan" : "Mode Terang diaktifkan");
+        }}
+        onSelectMenu={handleMenuSelect}
+        onLogout={logout}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen bg-canvas font-sans text-saas-dark overflow-hidden relative">
@@ -730,6 +753,34 @@ export default function Home() {
 
           {/* Categorized Menu Links */}
           <nav className="space-y-4">
+            {/* Tombol Kembali ke Menu Utama (Odoo App Grid) */}
+            <div>
+              {isSidebarCollapsed ? (
+                <div className="relative group flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowMenuPage(true)}
+                    className="w-11 h-11 flex items-center justify-center rounded-xl text-white bg-white/15 hover:bg-white/25 border border-white/20 transition-all cursor-pointer"
+                    aria-label="Menu Utama"
+                  >
+                    <DotsNine className="w-5 h-5 text-white" weight="bold" />
+                  </button>
+                  <div className="absolute left-full ml-3 px-2.5 py-1.5 bg-gray-900 text-white text-xs font-semibold rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 shadow-xl top-1/2 -translate-y-1/2">
+                    Menu Utama
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowMenuPage(true)}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/15 hover:bg-white/25 border border-white/20 transition-all cursor-pointer"
+                >
+                  <DotsNine className="w-4 h-4 shrink-0 text-white" weight="bold" />
+                  <span>Menu Utama</span>
+                </button>
+              )}
+            </div>
+
             {navSections.map((section) => (
               <div key={section.category}>
                 {!isSidebarCollapsed ? (
@@ -923,6 +974,18 @@ export default function Home() {
 
               {/* Categorized Menu Links on Mobile */}
               <nav className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    setShowMenuPage(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-white/15 hover:bg-white/25 border border-white/20 transition-all cursor-pointer"
+                >
+                  <DotsNine className="w-4 h-4 text-white" weight="bold" />
+                  <span>Menu Utama</span>
+                </button>
+
                 {navSections.map((section) => (
                   <div key={section.category}>
                     <p className="text-[10px] font-bold tracking-wider uppercase text-white/75 px-3 mb-1.5">
