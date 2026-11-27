@@ -26,9 +26,10 @@ interface LansiaModuleProps {
   selectedId?: string;
   onBack?: () => void;
   backLabel?: string;
+  onNavigateToPelayanan?: (pasienId: string) => void;
 }
 
-export default function LansiaModule({ posyanduId, activePeriode, searchQuery = "", selectedId, onBack, backLabel }: LansiaModuleProps) {
+export default function LansiaModule({ posyanduId, activePeriode, searchQuery = "", selectedId, onBack, backLabel, onNavigateToPelayanan }: LansiaModuleProps) {
   const { user } = useAuth();
   const initialCacheKey = `lansias_${posyanduId}_p1_lim10`;
   const [lansias, setLansias] = useState<Lansia[]>(() => {
@@ -896,6 +897,7 @@ export default function LansiaModule({ posyanduId, activePeriode, searchQuery = 
             handleAddExamSubmit={handleAddExamSubmit}
             openEditExamModal={openEditExamModal}
             openDeleteExamModal={openDeleteExamModal}
+            onNavigateToPelayanan={onNavigateToPelayanan}
           />
         ) : (
           <div className="space-y-6 animate-fadeIn">

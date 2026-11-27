@@ -42,6 +42,7 @@ import AddLansiaModal from "./components/AddLansiaModal";
 interface PelayananModuleProps {
   posyanduId: string;
   activePeriode?: PeriodePelayanan | null;
+  initialPasienId?: string;
   onOpenPeriodeModal?: () => void;
   onNavigate?: (menu: string, patientId?: string) => void;
 }
@@ -49,6 +50,7 @@ interface PelayananModuleProps {
 export default function PelayananModule({
   posyanduId,
   activePeriode,
+  initialPasienId,
   onOpenPeriodeModal,
   onNavigate,
 }: PelayananModuleProps) {
@@ -64,6 +66,14 @@ export default function PelayananModule({
   const [query, setQuery] = useState("");
   const [selectedPasien, setSelectedPasien] = useState<Pasien | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!initialPasienId || pasiens.length === 0) return;
+    const found = pasiens.find((p) => p.id === initialPasienId);
+    if (found) {
+      setSelectedPasien(found);
+    }
+  }, [initialPasienId, pasiens]);
 
   // Modal konfirmasi hapus log
   const [deletingLog, setDeletingLog] = useState<SessionLog | null>(null);

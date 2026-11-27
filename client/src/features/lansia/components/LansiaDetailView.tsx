@@ -38,6 +38,7 @@ export interface LansiaDetailViewProps {
   backLabel?: string;
   onEditProfile: (lansia: Lansia) => void;
   onDeleteProfile: () => void;
+  onNavigateToPelayanan?: (pasienId: string) => void;
   currentPeriodExam?: PemeriksaanLansia | null;
   examDate: string;
   setExamDate: (d: string) => void;
@@ -75,6 +76,7 @@ export default function LansiaDetailView({
   backLabel,
   onEditProfile,
   onDeleteProfile,
+  onNavigateToPelayanan,
   currentPeriodExam,
   examDate,
   setExamDate,
@@ -272,7 +274,30 @@ export default function LansiaDetailView({
             )}
           </div>
 
-          <form onSubmit={handleAddExamSubmit} className="space-y-4">
+          {!currentPeriodExam ? (
+            <div className="p-6 rounded-xl bg-amber-50/50 border border-amber-200/80 flex flex-col items-center text-center space-y-3">
+              <div className="w-11 h-11 rounded-xl bg-amber-100/80 text-amber-700 flex items-center justify-center">
+                <ClipboardList className="w-5 h-5" />
+              </div>
+              <div className="space-y-1 max-w-md">
+                <p className="text-sm font-bold text-slate-900">
+                  Belum Ada Pemeriksaan pada Periode Ini
+                </p>
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Untuk mencatat hasil pemeriksaan bulanan <strong className="text-slate-800">{activeLansia.nama}</strong>, silakan lanjutkan melalui menu Pelayanan.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigateToPelayanan?.(activeLansia.id)}
+                className="px-5 py-2.5 bg-saas-primary hover:bg-saas-primary-active text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Input Pemeriksaan di Pelayanan →</span>
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleAddExamSubmit} className="space-y-4">
             {examError && (
               <div className="p-3 bg-red-50 text-trend-dangerText border border-red-100 rounded-lg text-xs font-bold flex gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" /> {examError}
@@ -475,6 +500,7 @@ export default function LansiaDetailView({
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
 
